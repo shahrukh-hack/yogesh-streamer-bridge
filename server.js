@@ -70,7 +70,7 @@ async function getRebrandedManifest() {
 
             cachedManifest = {
                 id: 'org.yogeshstreamer.addon',
-                version: '1.2.0',
+                version: '1.2.1',
                 name: 'Yogesh Streamer',
                 description: 'Official Multi-Device Addon for Movies, Web Series, Bollywood & Live Sports',
                 logo: BRAND_LOGO,
@@ -104,7 +104,7 @@ async function getRebrandedManifest() {
     // Safe fallback if upstream is unreachable
     return {
         id: 'org.yogeshstreamer.addon',
-        version: '1.2.0',
+        version: '1.2.1',
         name: 'Yogesh Streamer',
         description: 'Official Multi-Device Addon for Movies, Web Series, Bollywood & Live Sports',
         logo: BRAND_LOGO,
@@ -374,11 +374,22 @@ const server = http.createServer(async (req, res) => {
 
     // Stream resolver route: /stream/:type/:id.json
     if (pathname.startsWith('/stream/')) {
-        const parts = pathname.replace('/stream/', '').replace('.json', '').split('/');
-        const type = parts[0];
-        const id = parts[1];
+        const afterPrefix = pathname.slice('/stream/'.length);
+        const firstSlash = afterPrefix.indexOf('/');
+        if (firstSlash === -1) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ streams: [] }));
+            return;
+        }
 
-        if (!type || !id) {
+        const type = afterPrefix.slice(0, firstSlash);
+        let idRaw = afterPrefix.slice(firstSlash + 1);
+        if (idRaw.endsWith('.json')) {
+            idRaw = idRaw.slice(0, -5);
+        }
+        const rawId = decodeURIComponent(idRaw);
+
+        if (!type || !rawId) {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ streams: [] }));
             return;
@@ -387,11 +398,11 @@ const server = http.createServer(async (req, res) => {
         try {
             // If type was requested as movie/series but upstream stores it under 'other' for cnc: IDs
             let targetType = type;
-            if (id.startsWith('cnc:') && type === 'movie') {
+            if (rawId.startsWith('cnc:') && (type === 'movie' || type === 'series')) {
                 targetType = 'other';
             }
 
-            const upstreamUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(targetType)}/${encodeURIComponent(id)}.json`;
+            const upstreamUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`;
             const data = await fetchJson(upstreamUrl);
 
             let streams = Array.isArray(data?.streams) ? data.streams : [];
@@ -425,7 +436,7 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
             res.end(JSON.stringify({ streams: brandedStreams }));
         } catch (err) {
-            console.error(`Error resolving streams for ${type}/${id}:`, err.message);
+            console.error(`Error resolving streams for ${type}/${rawId}:`, err.message);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ streams: [] }));
         }
@@ -466,10 +477,20 @@ const server = http.createServer(async (req, res) => {
 
     // Meta route: /meta/:type/:id.json
     if (pathname.startsWith('/meta/')) {
-        const parts = pathname.replace('/meta/', '').replace('.json', '').split('/');
-        const type = parts[0];
-        const id = parts[1];
-        const rawId = decodeURIComponent(id || '');
+        const afterPrefix = pathname.slice('/meta/'.length);
+        const firstSlash = afterPrefix.indexOf('/');
+        if (firstSlash === -1) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ meta: null }));
+            return;
+        }
+
+        const type = afterPrefix.slice(0, firstSlash);
+        let idRaw = afterPrefix.slice(firstSlash + 1);
+        if (idRaw.endsWith('.json')) {
+            idRaw = idRaw.slice(0, -5);
+        }
+        const rawId = decodeURIComponent(idRaw);
 
         // For IMDb titles (tt...), let Cinemeta handle metadata
         if (rawId.startsWith('tt')) {
@@ -479,18 +500,18 @@ const server = http.createServer(async (req, res) => {
         }
 
         try {
-            let mappedPath = pathname;
+            let targetType = type;
             let isMovieMappedFromOther = false;
-            if (pathname.startsWith('/meta/movie/') && rawId.startsWith('cnc:')) {
-                mappedPath = `/meta/other/${encodeURIComponent(rawId)}.json`;
+            if (rawId.startsWith('cnc:') && (type === 'movie' || type === 'series')) {
+                targetType = 'other';
                 isMovieMappedFromOther = true;
             }
 
-            const upstreamUrl = `${UPSTREAM_RESOLVER}${mappedPath}`;
+            const upstreamUrl = `${UPSTREAM_RESOLVER}/meta/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`;
             const data = await fetchJson(upstreamUrl);
 
             if (data?.meta && (isMovieMappedFromOther || data.meta.type === 'other')) {
-                data.meta.type = 'movie';
+                data.meta.type = type;
             }
 
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -505,8 +526,28 @@ const server = http.createServer(async (req, res) => {
 
     // Subtitles route: /subtitles/:type/:id.json
     if (pathname.startsWith('/subtitles/')) {
+        const afterPrefix = pathname.slice('/subtitles/'.length);
+        const firstSlash = afterPrefix.indexOf('/');
+        if (firstSlash === -1) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ subtitles: [] }));
+            return;
+        }
+
+        const type = afterPrefix.slice(0, firstSlash);
+        let idRaw = afterPrefix.slice(firstSlash + 1);
+        if (idRaw.endsWith('.json')) {
+            idRaw = idRaw.slice(0, -5);
+        }
+        const rawId = decodeURIComponent(idRaw);
+
         try {
-            const upstreamUrl = `${UPSTREAM_RESOLVER}${pathname}`;
+            let targetType = type;
+            if (rawId.startsWith('cnc:') && (type === 'movie' || type === 'series')) {
+                targetType = 'other';
+            }
+
+            const upstreamUrl = `${UPSTREAM_RESOLVER}/subtitles/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`;
             const data = await fetchJson(upstreamUrl);
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
             res.end(JSON.stringify(data || { subtitles: [] }));
