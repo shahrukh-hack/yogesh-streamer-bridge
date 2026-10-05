@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Yogesh Streamer • Universal Cinema & Live TV</title>
+    <title>Yogesh Streamer • Cinema & Live TV</title>
 
-    <!-- PWA & Smart TV (Tizen, webOS, Android TV, iOS) Meta Tags -->
+    <!-- PWA & Smart TV (Tizen, webOS, VIDAA, Android TV, iOS) Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
     <link rel="icon" href="https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg">
     <meta name="theme-color" content="#04060C">
 
-    <!-- Video Engine & Icons -->
+    <!-- Video Engine & FontAwesome Icons -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
@@ -24,7 +24,7 @@
             --bg-deep: #04060C;
             --bg-surface: #090E1A;
             --bg-card: #0F172A;
-            --bg-card-focus: #1E293B;
+            --bg-card-hover: #18233C;
             --border-dim: rgba(255, 215, 0, 0.12);
             --border-glow: rgba(255, 215, 0, 0.45);
             --gold: #FFD700;
@@ -33,8 +33,9 @@
             --cyan-glow: rgba(0, 240, 255, 0.35);
             --text-main: #FFFFFF;
             --text-sub: #94A3B8;
+            --text-muted: #64748B;
             --red-live: #EF4444;
-            --radius-card: 16px;
+            --radius-card: 14px;
         }
 
         * {
@@ -56,26 +57,26 @@
             user-select: none;
         }
 
-        /* 📺 10-Foot Smart TV Focus Indicator (Samsung Tizen, Toshiba, LG) */
+        /* 📺 10-Foot Smart TV Spatial Focus Rings (Samsung Tizen, Toshiba VIDAA, LG webOS) */
         .focusable {
             outline: none;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
         }
 
         .focusable:focus, .focusable.focused {
             transform: scale(1.06) !important;
             border-color: var(--gold) !important;
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.6), 0 10px 30px rgba(0, 0, 0, 0.9) !important;
+            box-shadow: 0 0 28px rgba(255, 215, 0, 0.65), 0 12px 36px rgba(0, 0, 0, 0.95) !important;
             z-index: 10;
         }
 
         /* 🔝 Header Navigation */
         header {
-            background: rgba(4, 6, 12, 0.92);
+            background: rgba(4, 6, 12, 0.94);
             backdrop-filter: blur(28px);
             -webkit-backdrop-filter: blur(28px);
             border-bottom: 1px solid var(--border-dim);
-            padding: max(14px, env(safe-area-inset-top)) 24px 14px 24px;
+            padding: max(14px, env(safe-area-inset-top)) 28px 14px 28px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -92,8 +93,8 @@
         }
 
         .brand-logo {
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             border-radius: 12px;
             object-fit: cover;
             border: 2px solid var(--gold);
@@ -101,17 +102,17 @@
         }
 
         .brand-title-wrap h1 {
-            font-size: 19px;
+            font-size: 20px;
             font-weight: 900;
             background: var(--gold-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             line-height: 1.1;
         }
 
         .brand-title-wrap span {
-            font-size: 10px;
+            font-size: 11px;
             color: var(--cyan);
             font-weight: 800;
             letter-spacing: 0.8px;
@@ -123,31 +124,31 @@
             align-items: center;
         }
 
-        /* Visible on TV and Desktop Screens */
-        @media (min-width: 768px) {
-            .header-nav-pills {
-                display: flex;
-            }
-        }
-
         .nav-pill {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid var(--border-dim);
             color: var(--text-sub);
-            padding: 8px 18px;
-            border-radius: 20px;
+            padding: 9px 18px;
+            border-radius: 22px;
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 800;
             cursor: pointer;
             text-decoration: none;
-            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-pill i {
+            font-size: 14px;
         }
 
         .nav-pill:hover, .nav-pill.active {
             background: var(--gold);
             color: #000;
             border-color: var(--gold);
-            box-shadow: 0 0 16px rgba(255, 215, 0, 0.35);
+            box-shadow: 0 0 18px rgba(255, 215, 0, 0.4);
         }
 
         .header-status {
@@ -161,66 +162,130 @@
             font-weight: 800;
             padding: 6px 14px;
             border-radius: 20px;
+            letter-spacing: 0.5px;
         }
 
         .status-dot {
-            width: 7px;
-            height: 7px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: #22c55e;
-            box-shadow: 0 0 8px #22c55e;
+            box-shadow: 0 0 10px #22c55e;
+            animation: pulseDot 2s infinite;
         }
 
-        /* 🎬 Billboard Hero Section (Netflix / Apple TV+ Style) */
+        @keyframes pulseDot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+
+        /* Responsive Layout for TV & Desktop (Width >= 768px) */
+        @media (min-width: 768px) {
+            .header-nav-pills {
+                display: flex;
+            }
+            nav.bottom-nav {
+                display: none !important;
+            }
+            body {
+                padding-bottom: 24px !important;
+            }
+        }
+
+        /* 📑 Tab View Containers */
+        .tab-view {
+            display: none;
+            padding: 24px 28px;
+            animation: fadeIn 0.25s ease-out;
+            max-width: 1680px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .tab-view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 🎬 Billboard Hero Section (Netflix / Apple TV+ Cinematic Style) */
         .hero-billboard {
             position: relative;
             width: 100%;
-            height: 420px;
+            height: 440px;
+            border-radius: 24px;
             overflow: hidden;
             background: var(--bg-surface);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
-            margin-bottom: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 215, 0, 0.12);
+            border: 1px solid var(--border-glow);
+            margin-bottom: 30px;
+            cursor: pointer;
         }
 
-        .hero-backdrop {
+        .hero-backdrop-container {
             position: absolute;
             inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: opacity 0.6s ease-in-out, transform 8s ease;
+            overflow: hidden;
         }
 
-        .hero-billboard:hover .hero-backdrop {
-            transform: scale(1.03);
+        .hero-ambient-blur {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            filter: blur(50px) brightness(0.35);
+            transform: scale(1.15);
+        }
+
+        .hero-featured-poster {
+            position: absolute;
+            right: 48px;
+            bottom: 36px;
+            width: 220px;
+            height: 330px;
+            border-radius: 16px;
+            object-fit: cover;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9);
+            border: 2px solid rgba(255, 215, 0, 0.5);
+            display: none;
+        }
+
+        @media (min-width: 900px) {
+            .hero-featured-poster {
+                display: block;
+            }
         }
 
         .hero-vignette {
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(4, 6, 12, 0.2) 0%, rgba(4, 6, 12, 0.65) 60%, var(--bg-deep) 100%),
-                        linear-gradient(90deg, rgba(4, 6, 12, 0.85) 0%, rgba(4, 6, 12, 0.4) 50%, transparent 100%);
+            background: linear-gradient(180deg, rgba(4, 6, 12, 0.1) 0%, rgba(4, 6, 12, 0.7) 65%, var(--bg-deep) 100%),
+                        linear-gradient(90deg, rgba(4, 6, 12, 0.95) 0%, rgba(4, 6, 12, 0.7) 45%, transparent 100%);
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            padding: 32px 28px;
+            padding: 38px 36px;
+            z-index: 2;
         }
 
         .hero-meta-row {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             flex-wrap: wrap;
         }
 
         .badge-rating {
-            background: rgba(255, 215, 0, 0.25);
+            background: rgba(255, 215, 0, 0.2);
             border: 1px solid var(--gold);
             color: var(--gold);
             font-size: 11px;
             font-weight: 800;
-            padding: 3px 8px;
+            padding: 4px 9px;
             border-radius: 6px;
         }
 
@@ -230,7 +295,7 @@
             color: #FFF;
             font-size: 11px;
             font-weight: 800;
-            padding: 3px 8px;
+            padding: 4px 9px;
             border-radius: 6px;
         }
 
@@ -239,35 +304,35 @@
             color: #FFF;
             font-size: 11px;
             font-weight: 900;
-            padding: 3px 10px;
+            padding: 4px 10px;
             border-radius: 6px;
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+            box-shadow: 0 0 14px rgba(239, 68, 68, 0.6);
         }
 
         .hero-title {
-            font-size: 34px;
+            font-size: 36px;
             font-weight: 900;
             color: #FFF;
             line-height: 1.15;
-            margin-bottom: 10px;
-            max-width: 800px;
-            text-shadow: 0 3px 14px rgba(0, 0, 0, 0.9);
+            margin-bottom: 12px;
+            max-width: 780px;
+            text-shadow: 0 4px 18px rgba(0, 0, 0, 0.95);
         }
 
         .hero-overview {
             font-size: 14px;
             color: var(--text-sub);
-            max-width: 650px;
+            max-width: 640px;
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            margin-bottom: 18px;
+            margin-bottom: 22px;
             line-height: 1.6;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
         }
 
         .hero-actions {
@@ -289,48 +354,42 @@
             align-items: center;
             gap: 10px;
             box-shadow: 0 6px 24px rgba(255, 215, 0, 0.45);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .btn-play-primary:hover {
-            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.65);
         }
 
         .btn-details {
             background: rgba(255, 255, 255, 0.12);
             color: #FFF;
             border: 1px solid rgba(255, 255, 255, 0.25);
-            padding: 13px 22px;
+            padding: 13px 24px;
             border-radius: 14px;
-            font-weight: 800;
-            font-size: 14px;
+            font-weight: 700;
+            font-size: 15px;
             cursor: pointer;
-            backdrop-filter: blur(12px);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+            transition: background 0.2s;
         }
 
-        /* 📑 Tab Content Views */
-        .tab-view {
-            display: none;
-            padding: 0 24px 24px 24px;
-            animation: fadeIn 0.25s ease-out;
+        .btn-details:hover {
+            background: rgba(255, 255, 255, 0.22);
         }
 
-        .tab-view.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 🏷️ Filter Chips Bar */
+        /* 🔘 Category Filter Chips Bar */
         .chips-bar {
             display: flex;
             gap: 10px;
             overflow-x: auto;
             scrollbar-width: none;
-            margin-bottom: 24px;
-            padding-bottom: 4px;
+            padding-bottom: 8px;
+            margin-bottom: 22px;
         }
 
         .chips-bar::-webkit-scrollbar {
@@ -342,11 +401,14 @@
             border: 1px solid var(--border-dim);
             color: var(--text-sub);
             padding: 9px 20px;
-            border-radius: 22px;
+            border-radius: 20px;
             font-size: 13px;
             font-weight: 800;
             white-space: nowrap;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
             transition: all 0.2s;
         }
 
@@ -354,12 +416,13 @@
             background: var(--gold);
             color: #000;
             border-color: var(--gold);
-            box-shadow: 0 4px 16px rgba(255, 215, 0, 0.35);
+            box-shadow: 0 4px 18px rgba(255, 215, 0, 0.4);
         }
 
-        /* 🍿 Netflix-Style Rows & Sections */
+        /* 🍿 Netflix-Style Carousel Rows */
         .catalog-row-section {
-            margin-bottom: 30px;
+            margin-bottom: 34px;
+            position: relative;
         }
 
         .section-headline {
@@ -370,7 +433,7 @@
         }
 
         .section-title-text {
-            font-size: 19px;
+            font-size: 20px;
             font-weight: 900;
             color: #FFF;
             display: flex;
@@ -383,6 +446,12 @@
             font-size: 11px;
             color: var(--cyan);
             font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .carousel-container {
+            position: relative;
+            width: 100%;
         }
 
         .carousel-track {
@@ -391,30 +460,70 @@
             overflow-x: auto;
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
-            padding: 6px 0 14px 0;
+            padding: 8px 4px 18px 4px;
+            scroll-behavior: smooth;
         }
 
         .carousel-track::-webkit-scrollbar {
             display: none;
         }
 
+        /* Carousel Navigation Buttons for Desktop / Smart TV */
+        .carousel-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 44px;
+            height: 72px;
+            background: rgba(4, 6, 12, 0.85);
+            border: 1px solid var(--border-glow);
+            color: var(--gold);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 15;
+            border-radius: 8px;
+            opacity: 0;
+            transition: opacity 0.25s, background 0.2s;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+        }
+
+        .carousel-container:hover .carousel-arrow {
+            opacity: 1;
+        }
+
+        .carousel-arrow:hover {
+            background: var(--gold);
+            color: #000;
+        }
+
+        .carousel-arrow.left {
+            left: -8px;
+        }
+
+        .carousel-arrow.right {
+            right: -8px;
+        }
+
         /* 🃏 Media Poster Cards (Golden Ratio 2:3) */
         .media-poster-card {
-            flex: 0 0 150px;
+            flex: 0 0 152px;
             cursor: pointer;
             position: relative;
         }
 
         @media (min-width: 1024px) {
             .media-poster-card {
-                flex: 0 0 165px;
+                flex: 0 0 172px;
             }
         }
 
         .poster-frame {
             position: relative;
             width: 100%;
-            height: 225px;
+            height: 232px;
             border-radius: var(--radius-card);
             overflow: hidden;
             background: var(--bg-card);
@@ -433,18 +542,18 @@
             transform: scale(1.06);
         }
 
-        /* Netflix Top 10 Number Overlay */
         .top10-rank {
             position: absolute;
-            left: -8px;
-            bottom: -15px;
-            font-size: 64px;
+            left: 4px;
+            bottom: 4px;
+            font-size: 54px;
             font-weight: 900;
             color: #04060C;
-            -webkit-text-stroke: 2px var(--gold);
+            -webkit-text-stroke: 2.5px var(--gold);
             z-index: 5;
             pointer-events: none;
-            text-shadow: 0 0 14px rgba(255, 215, 0, 0.5);
+            line-height: 1;
+            text-shadow: 0 0 16px rgba(255, 215, 0, 0.6);
         }
 
         .badge-card-quality {
@@ -452,12 +561,13 @@
             top: 8px;
             right: 8px;
             background: rgba(0, 0, 0, 0.88);
-            border: 1px solid rgba(255, 215, 0, 0.4);
+            border: 1px solid rgba(255, 215, 0, 0.5);
             color: var(--gold);
             font-size: 9px;
             font-weight: 900;
             padding: 3px 6px;
             border-radius: 5px;
+            z-index: 3;
         }
 
         .poster-title {
@@ -474,41 +584,42 @@
         /* 📺 Live TV Grid */
         .grid-channels-hub {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 14px;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 16px;
         }
 
         .channel-tile {
             background: var(--bg-card);
             border: 1.5px solid var(--border-dim);
             border-radius: var(--radius-card);
-            padding: 16px 12px;
+            padding: 18px 14px;
             text-align: center;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s;
         }
 
         .channel-tile:hover {
             border-color: var(--gold);
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            box-shadow: 0 0 24px rgba(255, 215, 0, 0.35);
         }
 
         .channel-icon-wrap {
             width: 100%;
-            height: 65px;
+            height: 70px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         .channel-icon-wrap img {
-            max-width: 80px;
-            max-height: 60px;
+            max-width: 90px;
+            max-height: 64px;
             object-fit: contain;
         }
 
@@ -526,7 +637,7 @@
             font-size: 10px;
             color: var(--cyan);
             font-weight: 800;
-            margin-top: 4px;
+            margin-top: 5px;
         }
 
         /* 🏏 Sports Match Cards */
@@ -534,8 +645,8 @@
             background: var(--bg-card);
             border: 1.5px solid var(--border-dim);
             border-radius: var(--radius-card);
-            padding: 18px 20px;
-            margin-bottom: 14px;
+            padding: 20px 22px;
+            margin-bottom: 16px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -559,51 +670,62 @@
         }
 
         .match-title {
-            font-size: 17px;
+            font-size: 18px;
             font-weight: 900;
             color: #FFF;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
 
-        /* 🔍 Search Input */
+        /* 🔍 Search View */
         .search-container {
             position: relative;
             margin-bottom: 24px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .search-bar-input {
             width: 100%;
             background: var(--bg-card);
             border: 1.5px solid var(--border-dim);
-            border-radius: 18px;
-            padding: 18px 20px 18px 52px;
+            border-radius: 20px;
+            padding: 18px 24px 18px 56px;
             color: #FFF;
             font-size: 16px;
             outline: none;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .search-bar-input:focus {
             border-color: var(--gold);
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.35);
         }
 
         .search-lens-icon {
             position: absolute;
-            left: 20px;
+            left: 22px;
             top: 50%;
             transform: translateY(-50%);
             color: var(--gold);
             font-size: 18px;
         }
 
-        /* 🎬 Stream Picker Modal */
+        .search-grid-wrap {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 18px;
+        }
+
+        /* 🎬 Stream Selector Bottom Sheet Modal */
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.88);
-            backdrop-filter: blur(16px);
-            z-index: 9998;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            z-index: 1000;
             display: none;
             align-items: flex-end;
             justify-content: center;
@@ -613,18 +735,31 @@
             display: flex;
         }
 
+        @media (min-width: 768px) {
+            .modal-overlay {
+                align-items: center;
+            }
+        }
+
         .stream-sheet-box {
-            background: #090E1A;
-            border-top: 2px solid var(--gold);
-            border-radius: 28px 28px 0 0;
+            background: #0B101E;
+            border: 1.5px solid var(--border-glow);
+            border-radius: 24px 24px 0 0;
             width: 100%;
-            max-width: 640px;
+            max-width: 620px;
             max-height: 85vh;
+            padding: 26px 24px;
             display: flex;
             flex-direction: column;
-            padding: 24px 22px max(24px, env(safe-area-inset-bottom)) 22px;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.95);
             animation: slideUp 0.25s ease-out;
-            box-shadow: 0 -12px 50px rgba(0, 0, 0, 0.95);
+        }
+
+        @media (min-width: 768px) {
+            .stream-sheet-box {
+                border-radius: 24px;
+                animation: zoomIn 0.2s ease-out;
+            }
         }
 
         @keyframes slideUp {
@@ -632,34 +767,40 @@
             to { transform: translateY(0); }
         }
 
+        @keyframes zoomIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
         .sheet-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 18px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-dim);
+            padding-bottom: 14px;
         }
 
         .sheet-heading {
             font-size: 18px;
             font-weight: 900;
             color: #FFF;
-            max-width: 85%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            line-height: 1.2;
+            padding-right: 12px;
         }
 
         .sheet-close-btn {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.1);
             border: none;
             color: #FFF;
-            width: 34px;
-            height: 34px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            flex-shrink: 0;
         }
 
         .stream-options-list {
@@ -698,11 +839,13 @@
         .stream-detail-sub {
             font-size: 12px;
             color: var(--text-sub);
+            line-height: 1.4;
         }
 
         .stream-play-symbol {
             color: var(--gold);
-            font-size: 24px;
+            font-size: 26px;
+            margin-left: 12px;
         }
 
         /* 📺 Fullscreen Cinema Player Modal */
@@ -720,11 +863,11 @@
         }
 
         .player-header-bar {
-            padding: max(14px, env(safe-area-inset-top)) 20px 14px 20px;
+            padding: max(14px, env(safe-area-inset-top)) 24px 14px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: rgba(9, 14, 26, 0.95);
+            background: rgba(9, 14, 26, 0.96);
             border-bottom: 1px solid var(--border-dim);
         }
 
@@ -732,7 +875,7 @@
             background: none;
             border: none;
             color: #FFF;
-            font-size: 17px;
+            font-size: 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -755,14 +898,14 @@
             object-fit: contain;
         }
 
-        /* 📱 Bottom Navigation Bar */
+        /* 📱 Bottom Navigation Bar (Mobile / Small Screens) */
         nav.bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
             height: calc(65px + env(safe-area-inset-bottom));
-            background: rgba(4, 6, 12, 0.95);
+            background: rgba(4, 6, 12, 0.96);
             backdrop-filter: blur(28px);
             -webkit-backdrop-filter: blur(28px);
             border-top: 1px solid var(--border-dim);
@@ -787,7 +930,7 @@
         }
 
         .bottom-nav-item i {
-            font-size: 19px;
+            font-size: 18px;
         }
 
         .bottom-nav-item.active {
@@ -799,15 +942,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 40px;
+            padding: 36px;
             color: var(--gold);
-            font-size: 28px;
+            font-size: 26px;
         }
     </style>
 </head>
 <body>
 
-    <!-- 🔝 Header -->
+    <!-- 🔝 LUXURY STICKY HEADER -->
     <header>
         <div class="brand-container focusable" tabindex="0" onclick="switchNavTab('tab-home', 0)">
             <img src="https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg" alt="Logo" class="brand-logo">
@@ -818,16 +961,16 @@
         </div>
 
         <div class="header-nav-pills">
-            <a class="nav-pill active focusable" tabindex="0" onclick="switchNavTab('tab-home', 0)">🏠 Home</a>
-            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-movies', 1)">🎬 Movies</a>
-            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-series', 2)">📺 Series</a>
-            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-livetv', 3)">📡 Live TV</a>
-            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-sports', 4)">⚡ Sports</a>
-            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-search', 5)">🔍 Search</a>
+            <a class="nav-pill active focusable" tabindex="0" onclick="switchNavTab('tab-home', 0)"><i class="fas fa-home"></i> Home</a>
+            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-movies', 1)"><i class="fas fa-film"></i> Movies</a>
+            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-series', 2)"><i class="fas fa-tv"></i> Series</a>
+            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-livetv', 3)"><i class="fas fa-satellite-dish"></i> Live TV</a>
+            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-sports', 4)"><i class="fas fa-baseball-bat-ball"></i> Sports</a>
+            <a class="nav-pill focusable" tabindex="0" onclick="switchNavTab('tab-search', 5)"><i class="fas fa-search"></i> Search</a>
         </div>
 
         <div class="header-status">
-            <span class="status-dot"></span> 42 CLOUD SOURCES ACTIVE
+            <span class="status-dot"></span> 42 CLOUD SOURCES ONLINE
         </div>
     </header>
 
@@ -835,38 +978,41 @@
     <div id="tab-home" class="tab-view active">
         <!-- Billboard Hero Feature -->
         <div class="hero-billboard focusable" tabindex="0" id="hero-billboard" onclick="openHeroPlay()">
-            <img id="hero-backdrop-img" src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600" class="hero-backdrop" alt="Hero">
+            <div class="hero-backdrop-container">
+                <div class="hero-ambient-blur" id="hero-ambient-bg" style="background-image: url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600');"></div>
+                <img id="hero-poster-img" src="https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg" class="hero-featured-poster" alt="Featured Poster">
+            </div>
             <div class="hero-vignette">
                 <div class="hero-meta-row">
-                    <span class="badge-rating">★ 9.2 IMDb</span>
-                    <span class="badge-pill">4K ULTRA HD</span>
-                    <span class="badge-pill">DOLBY ATMOS</span>
-                    <span class="badge-rating">HINDI DUBBED</span>
+                    <span class="badge-rating">★ 9.1 ULTRA HD</span>
+                    <span class="badge-pill">4K DOLBY ATMOS</span>
+                    <span class="badge-pill">MULTI-AUDIO DUAL</span>
+                    <span class="badge-live-pulse"><i class="fas fa-bolt"></i> TRENDING #1</span>
                 </div>
-                <div class="hero-title" id="hero-title">Connecting to Cinema Engine...</div>
-                <div class="hero-overview" id="hero-desc">Connecting to 42 cloud catalogs and verified HLS resolvers...</div>
+                <h2 class="hero-title" id="hero-title">Yogesh Streamer Cinema</h2>
+                <p class="hero-overview" id="hero-desc">Experience 42 dynamic cloud providers offering thousands of 1080p and 4K movies, binge-worthy series, live cricket, and 24/7 Indian TV channels.</p>
                 <div class="hero-actions">
-                    <button class="btn-play-primary focusable" tabindex="0" id="hero-play-btn">
-                        <i class="fas fa-play"></i> Watch Direct 1080p
+                    <button class="btn-play-primary focusable" tabindex="0" id="hero-play-btn" onclick="event.stopPropagation(); openHeroPlay()">
+                        <i class="fas fa-play"></i> Watch Now
                     </button>
-                    <button class="btn-details focusable" tabindex="0" onclick="event.stopPropagation(); openHeroPlay()">
-                        <i class="fas fa-info-circle"></i> Server Options
+                    <button class="btn-details focusable" tabindex="0" onclick="event.stopPropagation(); switchNavTab('tab-movies', 1)">
+                        <i class="fas fa-compass"></i> Explore Catalogs
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Filter Chips Bar -->
+        <!-- Quick Filters -->
         <div class="chips-bar" id="home-chips">
-            <div class="chip-btn active focusable" tabindex="0" onclick="filterHomeCatalog('ALL', this)">🔥 All Catalogs</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('BOLLYWOOD', this)">🎬 Bollywood & Hindi</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('HOLLYWOOD', this)">⭐ Marvel & 4K UHD</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('OTT', this)">🍿 Netflix & Prime</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('SERIES', this)">📺 Web Series</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('ANIME', this)">⛩️ Anime Hub</div>
+            <div class="chip-btn active focusable" tabindex="0" onclick="filterHomeCatalog('ALL', this)">All Catalogs</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('BOLLYWOOD', this)">🇮🇳 Bollywood & Regional</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('HOLLYWOOD', this)">🍿 Hollywood Dual-Audio</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('OTT', this)">✨ Netflix / Prime / Disney</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('SERIES', this)">📺 Complete Web Series</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('ANIME', this)">⚔️ Anime & K-Drama</div>
         </div>
 
-        <!-- Dynamic Container for ALL 42 Catalogs -->
+        <!-- All 42 Dynamic Cloud Catalogs for Home -->
         <div id="home-catalogs-grid">
             <div class="spinner-gold"><i class="fas fa-spinner fa-spin"></i></div>
         </div>
@@ -874,12 +1020,12 @@
 
     <!-- 🎬 2. MOVIES TAB -->
     <div id="tab-movies" class="tab-view">
-        <div class="chips-bar">
+        <div class="chips-bar" id="movies-chips">
             <div class="chip-btn active focusable" tabindex="0" onclick="filterMoviesCategory('ALL', this)">All Movies</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('4K', this)">True 4K UHD</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('BOLLY', this)">Bollywood Hits</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('SOUTH', this)">South Hindi Dubbed</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('HOLLY', this)">Hollywood Dual-Audio</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('4K', this)">💎 True 4K UHD</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('BOLLY', this)">🇮🇳 Bollywood Blockbusters</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('SOUTH', this)">🔥 South Hindi Dubbed</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('HOLLY', this)">🌍 Hollywood Dual-Audio</div>
         </div>
         <div id="movies-catalogs-grid">
             <div class="spinner-gold"><i class="fas fa-spinner fa-spin"></i></div>
@@ -888,12 +1034,13 @@
 
     <!-- 📺 3. SERIES TAB -->
     <div id="tab-series" class="tab-view">
-        <div class="chips-bar">
+        <div class="chips-bar" id="series-chips">
             <div class="chip-btn active focusable" tabindex="0" onclick="filterSeriesCategory('ALL', this)">All Series</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('NETFLIX', this)">Netflix Originals</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('PRIME', this)">Amazon Prime Hits</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('HOTSTAR', this)">Hotstar Specials</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('KDRAMA', this)">K-Dramas Hindi</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('NETFLIX', this)">🔴 Netflix Originals</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('PRIME', this)">🔵 Amazon Prime Hits</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('HOTSTAR', this)">⭐ Disney+ Hotstar</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('KDRAMA', this)">🌸 K-Dramas & Asian Drama</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('ANIME', this)">⚔️ Anime Series (Multi-Audio)</div>
         </div>
         <div id="series-catalogs-grid">
             <div class="spinner-gold"><i class="fas fa-spinner fa-spin"></i></div>
@@ -903,18 +1050,18 @@
     <!-- 📡 4. LIVE TV TAB (100% Guaranteed 24/7 Working Feeds) -->
     <div id="tab-livetv" class="tab-view">
         <div class="section-headline">
-            <div class="section-title-text">📡 24/7 Verified Live Indian TV Channels</div>
-            <div class="section-counter">DIRECT HLS FEEDS</div>
+            <div class="section-title-text"><i class="fas fa-satellite-dish" style="color: var(--cyan);"></i> 24/7 Verified Live Indian TV Channels</div>
+            <div class="section-counter">DIRECT HLS EDGE FEEDS</div>
         </div>
 
-        <div class="chips-bar">
+        <div class="chips-bar" id="livetv-chips">
             <div class="chip-btn active focusable" tabindex="0" onclick="filterLiveTVChannels('ALL', this)">All Channels</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterLiveTVChannels('SPORTS', this)">🏏 Sports & Cricket</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterLiveTVChannels('ENTERTAINMENT', this)">🎭 Entertainment</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterLiveTVChannels('ENTERTAINMENT', this)">🎭 Entertainment & Movies</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterLiveTVChannels('NEWS', this)">📰 News HD</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterLiveTVChannels('MUSIC', this)">🎵 Music Hits</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterLiveTVChannels('DEVOTIONAL', this)">🕉️ Devotional</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterLiveTVChannels('GUJARATI', this)">🦁 Gujarati</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterLiveTVChannels('GUJARATI', this)">🦁 Gujarati Regional</div>
         </div>
 
         <div class="grid-channels-hub" id="channels-grid-box"></div>
@@ -923,8 +1070,8 @@
     <!-- ⚡ 5. LIVE SPORTS TAB -->
     <div id="tab-sports" class="tab-view">
         <div class="section-headline">
-            <div class="section-title-text">⚡ Live Cricket & Sports Arena</div>
-            <div class="section-counter">60FPS ULTRA HD</div>
+            <div class="section-title-text"><i class="fas fa-baseball-bat-ball" style="color: var(--gold);"></i> Live Cricket & Sports Arena</div>
+            <div class="section-counter">60FPS ULTRA HD LIVE</div>
         </div>
         <div id="sports-events-list"></div>
     </div>
@@ -933,9 +1080,9 @@
     <div id="tab-search" class="tab-view">
         <div class="search-container">
             <i class="fas fa-search search-lens-icon"></i>
-            <input type="text" id="universal-search-box" class="search-bar-input focusable" tabindex="0" placeholder="Search 1,000,000+ Movies, Series, Cricket & TV..." oninput="handleUniversalSearch(this.value)">
+            <input type="text" id="universal-search-box" class="search-bar-input focusable" tabindex="0" placeholder="Search movies, web series, live cricket, TV channels..." oninput="handleUniversalSearch(this.value)">
         </div>
-        <div class="grid-channels-hub" id="search-results-grid"></div>
+        <div class="search-grid-wrap" id="search-results-grid"></div>
     </div>
 
     <!-- 🎬 STREAM SELECTION BOTTOM SHEET MODAL -->
@@ -962,7 +1109,7 @@
         <div class="player-viewport" id="player-screen-wrap"></div>
     </div>
 
-    <!-- 📱 Bottom Navigation Bar -->
+    <!-- 📱 Bottom Navigation Bar (Mobile / Handheld) -->
     <nav class="bottom-nav">
         <div class="bottom-nav-item active focusable" tabindex="0" onclick="switchNavTab('tab-home', 0)">
             <i class="fas fa-home"></i>
@@ -1018,12 +1165,12 @@
 
         // 🌟 Verified Working Sports Feeds
         const VERIFIED_SPORTS_EVENTS = [
-            { title: "DD Sports 1 HD (Live Cricket Broadcast)", tour: "ICC & National Tournaments", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8" },
+            { title: "DD Sports 1 HD (Live Cricket Broadcast)", tour: "ICC & BCCI Tournaments", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8" },
             { title: "Cricket Live Feed 2 (1080p 60fps)", tour: "Global Cricket Hub", url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/7ff57cc9046b4c188b51a0d506f36e7f/index.m3u8" },
             { title: "Multi-Sport HD Arena", tour: "Football & Bilateral Series", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8" }
         ];
 
-        // Tab Switching
+        // 📑 Tab Switching Engine
         function switchNavTab(tabId, index) {
             document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
@@ -1053,7 +1200,7 @@
                 allBridgeCatalogs = Array.isArray(manifest?.catalogs) ? manifest.catalogs : [];
 
                 if (allBridgeCatalogs.length === 0) {
-                    homeGrid.innerHTML = '<div style="color: var(--text-sub); padding: 24px;">No catalogs returned.</div>';
+                    homeGrid.innerHTML = '<div style="color: var(--text-sub); padding: 24px;">No catalogs returned by cloud resolver.</div>';
                     return;
                 }
 
@@ -1061,18 +1208,18 @@
                 moviesGrid.innerHTML = '';
                 seriesGrid.innerHTML = '';
 
-                // Build sections for each catalog
+                // Build sections with distinct tab prefixes to avoid duplicate ID conflicts
                 allBridgeCatalogs.forEach((cat, idx) => {
                     if (cat.type === 'movie' || cat.type === 'other') {
-                        // Add to Home
-                        buildCatalogRowElement(cat, homeGrid, idx < 5, idx);
+                        // Add to Home tab
+                        buildCatalogRowElement(cat, homeGrid, 'home', idx < 4, idx);
 
                         // If series related, add to Series tab
                         const lower = (cat.name + ' ' + cat.id).toLowerCase();
-                        if (lower.includes('series') || lower.includes('netflix') || lower.includes('prime') || lower.includes('kisskh')) {
-                            buildCatalogRowElement(cat, seriesGrid, false, idx);
+                        if (lower.includes('series') || lower.includes('netflix') || lower.includes('prime') || lower.includes('kisskh') || lower.includes('drama') || lower.includes('anime')) {
+                            buildCatalogRowElement(cat, seriesGrid, 'series', false, idx);
                         } else {
-                            buildCatalogRowElement(cat, moviesGrid, false, idx);
+                            buildCatalogRowElement(cat, moviesGrid, 'movies', false, idx);
                         }
                     }
                 });
@@ -1082,20 +1229,24 @@
             }
         }
 
-        function buildCatalogRowElement(cat, parentContainer, loadImmediate, rankOffset) {
+        function buildCatalogRowElement(cat, parentContainer, tabPrefix, loadImmediate, rankOffset) {
             const sec = document.createElement('div');
             sec.className = 'catalog-row-section';
-            sec.id = `row-section-${cat.id}`;
+            sec.id = `row-section-${tabPrefix}-${cat.id}`;
             sec.setAttribute('data-id', cat.id);
             sec.setAttribute('data-name', cat.name);
 
             sec.innerHTML = `
                 <div class="section-headline">
                     <div class="section-title-text">${cat.name}</div>
-                    <div class="section-counter">1080P HD</div>
+                    <div class="section-counter">1080P ULTRA HD</div>
                 </div>
-                <div class="carousel-track" id="track-${cat.id}">
-                    <div class="spinner-gold"><i class="fas fa-spinner fa-spin"></i></div>
+                <div class="carousel-container">
+                    <button class="carousel-arrow left focusable" tabindex="0" onclick="scrollTrack('track-${tabPrefix}-${cat.id}', -600)"><i class="fas fa-chevron-left"></i></button>
+                    <div class="carousel-track" id="track-${tabPrefix}-${cat.id}" data-cat-id="${cat.id}">
+                        <div class="spinner-gold"><i class="fas fa-spinner fa-spin"></i></div>
+                    </div>
+                    <button class="carousel-arrow right focusable" tabindex="0" onclick="scrollTrack('track-${tabPrefix}-${cat.id}', 600)"><i class="fas fa-chevron-right"></i></button>
                 </div>
             `;
             parentContainer.appendChild(sec);
@@ -1111,41 +1262,58 @@
                             obs.unobserve(entry.target);
                         }
                     });
-                }, { rootMargin: '300px' });
+                }, { rootMargin: '350px' });
                 observer.observe(sec);
             }
         }
 
+        function scrollTrack(trackId, amount) {
+            const track = document.getElementById(trackId);
+            if (track) {
+                track.scrollBy({ left: amount, behavior: 'smooth' });
+            }
+        }
+
         async function fetchCatalogTrack(cat, isFirstRow) {
-            const track = document.getElementById(`track-${cat.id}`);
-            if (!track || track.getAttribute('data-loaded') === 'true') return;
+            // Check if already cached
+            let metas = catalogItemCache[cat.id];
 
-            try {
-                const path = `/catalog/${cat.type}/${cat.id}.json`;
-                const res = await fetch(`${API_BASE}${path}`);
-                const data = await res.json();
-                const metas = Array.isArray(data?.metas) ? data.metas : [];
+            if (!metas) {
+                try {
+                    const path = `/catalog/${cat.type}/${cat.id}.json`;
+                    const res = await fetch(`${API_BASE}${path}`);
+                    const data = await res.json();
+                    metas = Array.isArray(data?.metas) ? data.metas : [];
+                    catalogItemCache[cat.id] = metas;
 
-                catalogItemCache[cat.id] = metas;
+                    // Add to universal search index
+                    metas.forEach(m => {
+                        if (!universalSearchIndex.some(s => s.id === m.id)) universalSearchIndex.push(m);
+                    });
+
+                    // Set Hero billboard from first valid movie
+                    if (!heroFeaturedItem && metas.length > 0 && metas[0].poster) {
+                        setHeroBillboard(metas[0]);
+                    }
+                } catch (err) {
+                    console.error(`Error loading catalog ${cat.id}:`, err);
+                    metas = [];
+                }
+            }
+
+            // Populate all matching track elements across all tabs
+            const allTracksForCat = document.querySelectorAll(`[data-cat-id="${cat.id}"]`);
+            allTracksForCat.forEach(track => {
+                if (track.getAttribute('data-loaded') === 'true') return;
                 track.setAttribute('data-loaded', 'true');
 
                 if (metas.length === 0) {
-                    track.innerHTML = '<div style="color: var(--text-sub); font-size: 13px; padding: 14px;">No titles available in catalog</div>';
+                    track.innerHTML = '<div style="color: var(--text-sub); font-size: 13px; padding: 14px;">No titles available right now.</div>';
                     return;
                 }
 
-                // Add to search index
-                metas.forEach(m => {
-                    if (!universalSearchIndex.some(s => s.id === m.id)) universalSearchIndex.push(m);
-                });
-
-                // Set Hero from first valid movie
-                if (!heroFeaturedItem && metas[0] && (cat.id.includes('MoviesDrive') || cat.id.includes('VegaMovies'))) {
-                    setHeroBillboard(metas[0]);
-                }
-
                 track.innerHTML = '';
-                metas.slice(0, 24).forEach((item, idx) => {
+                metas.slice(0, 30).forEach((item, idx) => {
                     if (!item.poster) return;
                     const card = document.createElement('div');
                     card.className = 'media-poster-card focusable';
@@ -1167,17 +1335,25 @@
                     card.onclick = () => openStreamPicker('movie', item.id, item.name);
                     track.appendChild(card);
                 });
-            } catch (err) {
-                console.error(`Error loading catalog ${cat.id}:`, err);
-                track.innerHTML = '<div style="color: var(--text-sub); font-size: 13px; padding: 14px;">Offline</div>';
-            }
+            });
         }
 
         function setHeroBillboard(item) {
             heroFeaturedItem = item;
-            document.getElementById('hero-backdrop-img').src = item.poster || '';
-            document.getElementById('hero-title').innerText = item.name || '';
-            document.getElementById('hero-desc').innerText = `Stream ${item.name} in 1080p / 4K Ultra HD with multiple audio streams and zero ads.`;
+            const ambient = document.getElementById('hero-ambient-bg');
+            const poster = document.getElementById('hero-poster-img');
+            const title = document.getElementById('hero-title');
+            const desc = document.getElementById('hero-desc');
+
+            if (item.poster) {
+                ambient.style.backgroundImage = `url('${item.poster}')`;
+                poster.src = item.poster;
+            }
+            if (item.name) {
+                title.innerText = item.name;
+                desc.innerText = `Stream ${item.name} in 1080p / 4K Ultra HD with multiple audio streams and zero ads on Yogesh Streamer.`;
+            }
+
             document.getElementById('hero-play-btn').onclick = (e) => {
                 e.stopPropagation();
                 openStreamPicker('movie', item.id, item.name);
@@ -1190,7 +1366,7 @@
             }
         }
 
-        // Filtering for Home Tab
+        // 🔍 Filtering for Home Tab
         function filterHomeCatalog(cat, el) {
             document.querySelectorAll('#home-chips .chip-btn').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
@@ -1205,13 +1381,63 @@
                 } else if (cat === 'BOLLYWOOD') {
                     sec.style.display = (name.includes('moviesdrive') || name.includes('bolly') || name.includes('hdhub') || name.includes('moviebox')) ? 'block' : 'none';
                 } else if (cat === 'HOLLYWOOD') {
-                    sec.style.display = (name.includes('vegamovies') || name.includes('marvel') || name.includes('4khdhub') || name.includes('star wars')) ? 'block' : 'none';
+                    sec.style.display = (name.includes('vegamovies') || name.includes('marvel') || name.includes('4khdhub') || name.includes('star wars') || name.includes('rogmovies')) ? 'block' : 'none';
                 } else if (cat === 'OTT') {
                     sec.style.display = (name.includes('netflix') || name.includes('prime') || name.includes('hotstar') || name.includes('disney')) ? 'block' : 'none';
                 } else if (cat === 'SERIES') {
                     sec.style.display = (name.includes('series') || name.includes('kisskh') || name.includes('multimovies')) ? 'block' : 'none';
                 } else if (cat === 'ANIME') {
                     sec.style.display = (name.includes('anime') || name.includes('anilight')) ? 'block' : 'none';
+                }
+            });
+        }
+
+        // 🎬 Filtering for Movies Tab
+        function filterMoviesCategory(cat, el) {
+            document.querySelectorAll('#movies-chips .chip-btn').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+
+            const sections = document.querySelectorAll('#movies-catalogs-grid .catalog-row-section');
+            sections.forEach(sec => {
+                const name = (sec.getAttribute('data-name') || '').toLowerCase();
+                const id = (sec.getAttribute('data-id') || '').toLowerCase();
+
+                if (cat === 'ALL') {
+                    sec.style.display = 'block';
+                } else if (cat === '4K') {
+                    sec.style.display = (name.includes('4k') || id.includes('4k') || name.includes('hdhub') || name.includes('vegamovies')) ? 'block' : 'none';
+                } else if (cat === 'BOLLY') {
+                    sec.style.display = (name.includes('moviesdrive') || name.includes('bolly') || name.includes('hdhub4u') || name.includes('moviebox')) ? 'block' : 'none';
+                } else if (cat === 'SOUTH') {
+                    sec.style.display = (name.includes('moviesdrive') || name.includes('south') || name.includes('telugu') || name.includes('tamil')) ? 'block' : 'none';
+                } else if (cat === 'HOLLY') {
+                    sec.style.display = (name.includes('vegamovies') || name.includes('marvel') || name.includes('4khdhub') || name.includes('rogmovies')) ? 'block' : 'none';
+                }
+            });
+        }
+
+        // 📺 Filtering for Series Tab
+        function filterSeriesCategory(cat, el) {
+            document.querySelectorAll('#series-chips .chip-btn').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+
+            const sections = document.querySelectorAll('#series-catalogs-grid .catalog-row-section');
+            sections.forEach(sec => {
+                const name = (sec.getAttribute('data-name') || '').toLowerCase();
+                const id = (sec.getAttribute('data-id') || '').toLowerCase();
+
+                if (cat === 'ALL') {
+                    sec.style.display = 'block';
+                } else if (cat === 'NETFLIX') {
+                    sec.style.display = (name.includes('netflix') || id.includes('netflix')) ? 'block' : 'none';
+                } else if (cat === 'PRIME') {
+                    sec.style.display = (name.includes('prime') || id.includes('prime')) ? 'block' : 'none';
+                } else if (cat === 'HOTSTAR') {
+                    sec.style.display = (name.includes('hotstar') || id.includes('hotstar') || name.includes('disney')) ? 'block' : 'none';
+                } else if (cat === 'KDRAMA') {
+                    sec.style.display = (name.includes('kisskh') || name.includes('multimovies') || name.includes('drama') || name.includes('cinefreak')) ? 'block' : 'none';
+                } else if (cat === 'ANIME') {
+                    sec.style.display = (name.includes('anime') || id.includes('anime') || name.includes('reanime')) ? 'block' : 'none';
                 }
             });
         }
@@ -1237,7 +1463,7 @@
         }
 
         function filterLiveTVChannels(cat, el) {
-            document.querySelectorAll('#tab-livetv .chip-btn').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('#livetv-chips .chip-btn').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
 
             if (cat === 'ALL') {
@@ -1258,11 +1484,11 @@
                 card.innerHTML = `
                     <div class="match-header-row">
                         <span class="match-tour-title">⚡ ${s.tour}</span>
-                        <span class="badge-live-pulse"><i class="fas fa-circle" style="font-size: 7px;"></i> LIVE</span>
+                        <span class="badge-live-pulse"><i class="fas fa-circle" style="font-size: 7px;"></i> LIVE NOW</span>
                     </div>
                     <div class="match-title">${s.title}</div>
                     <button class="btn-play-primary" style="padding: 10px 22px; font-size: 13px;">
-                        <i class="fas fa-play"></i> Watch Stream
+                        <i class="fas fa-play"></i> Watch Live Stream
                     </button>
                 `;
                 card.onclick = () => launchCinemaPlayer(s.url, s.title);
@@ -1270,26 +1496,35 @@
             });
         }
 
-        // 🔍 Universal Search
+        // 🔍 Universal Search with Movie Poster Grid
         function handleUniversalSearch(query) {
             const grid = document.getElementById('search-results-grid');
             const q = query.trim().toLowerCase();
             if (!q) {
-                grid.innerHTML = '';
+                grid.innerHTML = '<div style="color: var(--text-sub); grid-column: 1 / -1; text-align: center; padding: 40px;">Type a title above to search across all 42 cloud catalogs.</div>';
                 return;
             }
 
             const matches = universalSearchIndex.filter(item => (item.name || '').toLowerCase().includes(q));
             grid.innerHTML = '';
+
+            if (matches.length === 0) {
+                grid.innerHTML = `<div style="color: var(--text-sub); grid-column: 1 / -1; text-align: center; padding: 40px;">No matches found for "${query}". Try another search term.</div>`;
+                return;
+            }
+
             matches.slice(0, 48).forEach(item => {
                 const card = document.createElement('div');
-                card.className = 'channel-tile focusable';
+                card.className = 'media-poster-card focusable';
                 card.tabIndex = 0;
+                card.style.flex = 'unset';
+
                 card.innerHTML = `
-                    <div class="channel-icon-wrap">
+                    <div class="poster-frame">
                         <img src="${item.poster || ''}" alt="${item.name}" onerror="this.src='https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg'">
+                        <div class="badge-card-quality">1080p</div>
                     </div>
-                    <div class="channel-title-text">${item.name}</div>
+                    <div class="poster-title">${item.name}</div>
                 `;
                 card.onclick = () => openStreamPicker('movie', item.id, item.name);
                 grid.appendChild(card);
@@ -1336,7 +1571,7 @@
                     container.appendChild(entry);
                 });
 
-                // Focus first stream for TV Remote
+                // Auto-focus first stream option for Smart TV Remotes
                 const firstEntry = container.querySelector('.stream-entry');
                 if (firstEntry) firstEntry.focus();
             } catch (err) {
@@ -1404,7 +1639,7 @@
             document.getElementById('cinema-player-modal').classList.remove('open');
         }
 
-        // 📺 Smart TV Remote Control D-Pad Key Listener (Samsung Tizen, Toshiba, LG, Android TV)
+        // 📺 2D Spatial Smart TV Remote Navigation Engine (Samsung Tizen, Toshiba, LG, Android TV)
         window.addEventListener('keydown', (e) => {
             const keyCode = e.keyCode || e.which;
             const isPlayerOpen = document.getElementById('cinema-player-modal').classList.contains('open');
@@ -1424,7 +1659,7 @@
                 }
             }
 
-            // In-Player TV Remote Controls
+            // In-Player Remote Controls
             if (isPlayerOpen) {
                 const video = document.querySelector('video');
                 if (!video) return;
@@ -1446,37 +1681,90 @@
                 return;
             }
 
-            // D-Pad Navigation for UI Cards
-            const focusables = Array.from(document.querySelectorAll('.focusable:not([style*="display: none"])'));
-            const active = document.activeElement;
-            const currentIndex = focusables.indexOf(active);
-
-            if (currentIndex === -1) {
-                if ([37, 38, 39, 40].includes(keyCode) && focusables.length > 0) {
-                    focusables[0].focus();
+            // D-Pad Arrow Navigation
+            if ([37, 38, 39, 40].includes(keyCode)) {
+                navigateSpatial(keyCode, e);
+            }
+            // Enter / OK Key
+            else if (keyCode === 13) {
+                const active = document.activeElement;
+                if (active && active.click) {
+                    active.click();
                     e.preventDefault();
+                }
+            }
+        });
+
+        // 🧭 2D Spatial Geometry Navigation Algorithm for TV Remotes
+        function navigateSpatial(keyCode, event) {
+            const focusables = Array.from(document.querySelectorAll('.focusable:not([style*="display: none"])'))
+                .filter(el => {
+                    const rect = el.getBoundingClientRect();
+                    return rect.width > 0 && rect.height > 0;
+                });
+
+            const active = document.activeElement;
+            if (!active || !focusables.includes(active)) {
+                if (focusables.length > 0) {
+                    focusables[0].focus();
+                    event.preventDefault();
                 }
                 return;
             }
 
-            // Arrow Right / Down
-            if (keyCode === 39 || keyCode === 40) {
-                const next = focusables[(currentIndex + 1) % focusables.length];
-                if (next) { next.focus(); next.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-                e.preventDefault();
+            const currentRect = active.getBoundingClientRect();
+            let bestCandidate = null;
+            let minDistance = Infinity;
+
+            focusables.forEach(target => {
+                if (target === active) return;
+                const tr = target.getBoundingClientRect();
+
+                let isValidDirection = false;
+                let dist = Infinity;
+
+                if (keyCode === 39) { // Right
+                    if (tr.left >= currentRect.left + 5) {
+                        const dx = tr.left - currentRect.right;
+                        const dy = Math.abs(tr.top - currentRect.top);
+                        dist = dx + dy * 2.5;
+                        isValidDirection = true;
+                    }
+                } else if (keyCode === 37) { // Left
+                    if (tr.right <= currentRect.right - 5) {
+                        const dx = currentRect.left - tr.right;
+                        const dy = Math.abs(tr.top - currentRect.top);
+                        dist = dx + dy * 2.5;
+                        isValidDirection = true;
+                    }
+                } else if (keyCode === 40) { // Down
+                    if (tr.top >= currentRect.top + 5) {
+                        const dy = tr.top - currentRect.bottom;
+                        const dx = Math.abs(tr.left - currentRect.left);
+                        dist = dy + dx * 1.5;
+                        isValidDirection = true;
+                    }
+                } else if (keyCode === 38) { // Up
+                    if (tr.bottom <= currentRect.bottom - 5) {
+                        const dy = currentRect.top - tr.bottom;
+                        const dx = Math.abs(tr.left - currentRect.left);
+                        dist = dy + dx * 1.5;
+                        isValidDirection = true;
+                    }
+                }
+
+                if (isValidDirection && dist < minDistance) {
+                    minDistance = dist;
+                    bestCandidate = target;
+                }
+            });
+
+            if (bestCandidate) {
+                bestCandidate.focus();
+                bestCandidate.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                event.preventDefault();
             }
-            // Arrow Left / Up
-            else if (keyCode === 37 || keyCode === 38) {
-                const prev = focusables[(currentIndex - 1 + focusables.length) % focusables.length];
-                if (prev) { prev.focus(); prev.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-                e.preventDefault();
-            }
-            // Enter / OK Key
-            else if (keyCode === 13) {
-                active.click();
-                e.preventDefault();
-            }
-        });
+        }
 
         // 🏁 Boot Application
         window.addEventListener('DOMContentLoaded', () => {
