@@ -1,6 +1,8 @@
 const http = require('http');
 const https = require('https');
 const url = require('url');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = process.env.PORT || 7000;
 const UPSTREAM_RESOLVER = process.env.UPSTREAM_RESOLVER || 'https://cncverse.dpdns.org';
@@ -311,6 +313,9 @@ function renderLandingHtml(host) {
         </div>
 
         <div class="btn-group">
+            <a class="btn-primary" href="/app" style="background: linear-gradient(135deg, #00E5FF 0%, #0066FF 100%); color: #FFF; box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4);">
+                ✨ Launch Standalone Web App (No Stremio Needed)
+            </a>
             <a class="btn-primary" href="${stremioWebUrl}" target="_blank">📱 1-Tap Install in Stremio Web (iOS / Mac / PC)</a>
             <a class="btn-app" href="${stremioProtocolUrl}">🚀 Open in Stremio App (Android / Windows / Linux)</a>
             <button class="btn-secondary" onclick="navigator.clipboard.writeText('${manifestUrl}'); alert('Copied Manifest URL to Clipboard!')">📋 Copy Addon Manifest URL</button>
@@ -349,6 +354,42 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/' || pathname === '/index.html') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(renderLandingHtml(host));
+        return;
+    }
+
+    // Standalone Web & iOS PWA Streaming App
+    if (pathname === '/app' || pathname === '/watch' || pathname === '/app.html') {
+        try {
+            const appHtml = fs.readFileSync(path.join(__dirname, 'app.html'), 'utf8');
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(appHtml);
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('Error loading standalone app: ' + e.message);
+        }
+        return;
+    }
+
+    // PWA Manifest
+    if (pathname === '/manifest.webmanifest') {
+        res.writeHead(200, { 'Content-Type': 'application/manifest+json' });
+        res.end(JSON.stringify({
+            name: "Yogesh Streamer",
+            short_name: "YogeshStreamer",
+            description: "Luxury Multi-Device Streaming App for Movies, Web Series & Live Cricket",
+            start_url: "/app",
+            display: "standalone",
+            background_color: "#070A12",
+            theme_color: "#070A12",
+            icons: [
+                {
+                    src: BRAND_LOGO,
+                    sizes: "512x512",
+                    type: "image/jpeg",
+                    purpose: "any maskable"
+                }
+            ]
+        }, null, 2));
         return;
     }
 
