@@ -6,65 +6,10 @@ const PORT = process.env.PORT || 7000;
 const UPSTREAM_RESOLVER = process.env.UPSTREAM_RESOLVER || 'https://cncverse.dpdns.org';
 const BRAND_LOGO = 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg';
 
-const MANIFEST = {
-    id: 'org.yogeshstreamer.addon',
-    version: '1.0.0',
-    name: 'Yogesh Streamer',
-    description: 'Official Multi-Device Addon for Movies, Web Series, Bollywood & Live Sports',
-    logo: BRAND_LOGO,
-    background: BRAND_LOGO,
-    resources: ['stream', 'catalog', 'meta'],
-    types: ['movie', 'series', 'tv'],
-    idPrefixes: ['tt', 'cnc_'],
-    catalogs: [
-        {
-            type: 'movie',
-            id: 'yogesh_movies',
-            name: '🌟 Yogesh Streamer Movies',
-            extra: [
-                {
-                    name: 'genre',
-                    isRequired: false,
-                    options: ['Bollywood', 'Hindi Dubbed', 'Hollywood', 'South Hindi', 'Action', 'Comedy']
-                },
-                { name: 'search', isRequired: false },
-                { name: 'skip', isRequired: false }
-            ]
-        },
-        {
-            type: 'series',
-            id: 'yogesh_series',
-            name: '📺 Yogesh Streamer Series',
-            extra: [
-                {
-                    name: 'genre',
-                    isRequired: false,
-                    options: ['Hindi Web Series', 'Netflix Hits', 'Prime Specials', 'Action', 'Drama']
-                },
-                { name: 'search', isRequired: false },
-                { name: 'skip', isRequired: false }
-            ]
-        },
-        {
-            type: 'tv',
-            id: 'yogesh_sports',
-            name: '⚡ Yogesh Streamer Live Sports',
-            extra: [
-                {
-                    name: 'genre',
-                    isRequired: false,
-                    options: ['🏏 Cricket', '⚽ Football', '🏎️ F1', '🥊 UFC', '🤼 WWE']
-                },
-                { name: 'search', isRequired: false },
-                { name: 'skip', isRequired: false }
-            ]
-        }
-    ],
-    behaviorHints: {
-        configurable: false,
-        adult: false
-    }
-};
+// In-memory manifest cache
+let cachedManifest = null;
+let lastManifestFetch = 0;
+const MANIFEST_CACHE_TTL = 1800000; // 30 minutes
 
 function fetchJson(targetUrl) {
     return new Promise((resolve, reject) => {
@@ -88,7 +33,7 @@ function fetchJson(targetUrl) {
             res.on('data', chunk => body += chunk);
             res.on('end', () => {
                 try {
-                    resolve(JSON.parse(body));
+                    resolve(body ? JSON.parse(body) : null);
                 } catch (e) {
                     reject(e);
                 }
@@ -101,6 +46,54 @@ function fetchJson(targetUrl) {
             reject(new Error('Request timeout'));
         });
     });
+}
+
+async function getRebrandedManifest() {
+    const now = Date.now();
+    if (cachedManifest && (now - lastManifestFetch) < MANIFEST_CACHE_TTL) {
+        return cachedManifest;
+    }
+
+    try {
+        const upstream = await fetchJson(`${UPSTREAM_RESOLVER}/manifest.json`);
+        if (upstream && Array.isArray(upstream.catalogs)) {
+            const rebrandedCatalogs = upstream.catalogs.map(c => {
+                let clean = (c.name || '').replace(/•?\s*CNCVerse Bridge/gi, '').replace(/\(other\)|\(tv\)/g, '').trim();
+                return {
+                    ...c,
+                    name: `🌟 ${clean}`
+                };
+            });
+
+            cachedManifest = {
+                ...upstream,
+                id: 'org.yogeshstreamer.addon',
+                name: 'Yogesh Streamer',
+                description: 'Official Multi-Device Addon for Movies, Web Series, Bollywood & Live Sports',
+                logo: BRAND_LOGO,
+                background: BRAND_LOGO,
+                catalogs: rebrandedCatalogs
+            };
+            lastManifestFetch = now;
+            return cachedManifest;
+        }
+    } catch (err) {
+        console.error('Error fetching upstream manifest:', err.message);
+    }
+
+    // Safe fallback if upstream is unreachable
+    return {
+        id: 'org.yogeshstreamer.addon',
+        version: '1.0.0',
+        name: 'Yogesh Streamer',
+        description: 'Official Multi-Device Addon for Movies, Web Series, Bollywood & Live Sports',
+        logo: BRAND_LOGO,
+        background: BRAND_LOGO,
+        resources: ['stream'],
+        types: ['movie', 'series'],
+        idPrefixes: ['tt', 'cnc_'],
+        catalogs: []
+    };
 }
 
 function setCorsHeaders(res) {
@@ -318,8 +311,14 @@ const server = http.createServer(async (req, res) => {
 
     // Stremio Addon Manifest
     if (pathname === '/manifest.json') {
-        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify(MANIFEST, null, 2));
+        try {
+            const manifest = await getRebrandedManifest();
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify(manifest, null, 2));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
         return;
     }
 
@@ -370,14 +369,15 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    // Catalog route: /catalog/:type/:id.json
+    // Catalog route: /catalog/:type/:id.json or with extra args
     if (pathname.startsWith('/catalog/')) {
         try {
             const upstreamUrl = `${UPSTREAM_RESOLVER}${pathname}`;
             const data = await fetchJson(upstreamUrl);
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-            res.end(JSON.stringify(data));
+            res.end(JSON.stringify(data || { metas: [] }));
         } catch (err) {
+            console.error(`Error fetching catalog ${pathname}:`, err.message);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ metas: [] }));
         }
@@ -390,10 +390,25 @@ const server = http.createServer(async (req, res) => {
             const upstreamUrl = `${UPSTREAM_RESOLVER}${pathname}`;
             const data = await fetchJson(upstreamUrl);
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-            res.end(JSON.stringify(data));
+            res.end(JSON.stringify(data || { meta: null }));
         } catch (err) {
+            console.error(`Error fetching meta ${pathname}:`, err.message);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ meta: null }));
+        }
+        return;
+    }
+
+    // Subtitles route: /subtitles/:type/:id.json
+    if (pathname.startsWith('/subtitles/')) {
+        try {
+            const upstreamUrl = `${UPSTREAM_RESOLVER}${pathname}`;
+            const data = await fetchJson(upstreamUrl);
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify(data || { subtitles: [] }));
+        } catch (err) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ subtitles: [] }));
         }
         return;
     }
