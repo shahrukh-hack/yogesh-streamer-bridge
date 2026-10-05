@@ -7,6 +7,7 @@ const path = require('path');
 const PORT = process.env.PORT || 7000;
 const UPSTREAM_RESOLVER = process.env.UPSTREAM_RESOLVER || 'https://cncverse.dpdns.org';
 const BRAND_LOGO = 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg';
+const APP_PIN = process.env.APP_PIN || '778899';
 
 // In-memory manifest cache
 let cachedManifest = null;
@@ -125,8 +126,8 @@ async function getRebrandedManifest() {
 
 function setCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
 }
 
 function renderLandingHtml(host) {
@@ -368,6 +369,36 @@ const server = http.createServer(async (req, res) => {
             res.end('Error loading standalone app: ' + e.message);
         }
         return;
+    }
+
+    // Security PIN Verification Endpoint
+    if (pathname === '/api/auth/pin' || pathname === '/api/auth/verify') {
+        if (req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const pin = String(data.pin || '').trim();
+                    if (pin === APP_PIN) {
+                        const token = Buffer.from(`family_session_${Date.now()}_${Math.random()}`).toString('base64');
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ success: true, token, message: 'Access Granted' }));
+                    } else {
+                        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ success: false, error: 'Incorrect 6-digit security PIN' }));
+                    }
+                } catch (e) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: 'Invalid request body' }));
+                }
+            });
+            return;
+        } else {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ok', protected: true }));
+            return;
+        }
     }
 
     // PWA Manifest
