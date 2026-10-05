@@ -57,21 +57,41 @@ async function getRebrandedManifest() {
     try {
         const upstream = await fetchJson(`${UPSTREAM_RESOLVER}/manifest.json`);
         if (upstream && Array.isArray(upstream.catalogs)) {
+            // Rebrand catalogs: convert "other" into "movie" so Stremio can display them in Discover
             const rebrandedCatalogs = upstream.catalogs.map(c => {
                 let clean = (c.name || '').replace(/•?\s*CNCVerse Bridge/gi, '').replace(/\(other\)|\(tv\)/g, '').trim();
+                let type = c.type === 'other' ? 'movie' : c.type;
                 return {
                     ...c,
+                    type: type,
                     name: `🌟 ${clean}`
                 };
             });
 
             cachedManifest = {
-                ...upstream,
                 id: 'org.yogeshstreamer.addon',
+                version: '1.2.0',
                 name: 'Yogesh Streamer',
                 description: 'Official Multi-Device Addon for Movies, Web Series, Bollywood & Live Sports',
                 logo: BRAND_LOGO,
                 background: BRAND_LOGO,
+                types: ['movie', 'series', 'tv'],
+                idPrefixes: ['tt', 'cnc:'],
+                resources: [
+                    'stream',
+                    'catalog',
+                    {
+                        name: 'meta',
+                        types: ['movie', 'series', 'tv'],
+                        idPrefixes: ['cnc:']
+                    },
+                    'subtitles'
+                ],
+                behaviorHints: {
+                    configurable: false,
+                    configurationRequired: false,
+                    adult: false
+                },
                 catalogs: rebrandedCatalogs
             };
             lastManifestFetch = now;
@@ -84,14 +104,19 @@ async function getRebrandedManifest() {
     // Safe fallback if upstream is unreachable
     return {
         id: 'org.yogeshstreamer.addon',
-        version: '1.0.0',
+        version: '1.2.0',
         name: 'Yogesh Streamer',
         description: 'Official Multi-Device Addon for Movies, Web Series, Bollywood & Live Sports',
         logo: BRAND_LOGO,
         background: BRAND_LOGO,
+        types: ['movie', 'series', 'tv'],
+        idPrefixes: ['tt', 'cnc:'],
         resources: ['stream'],
-        types: ['movie', 'series'],
-        idPrefixes: ['tt', 'cnc_'],
+        behaviorHints: {
+            configurable: false,
+            configurationRequired: false,
+            adult: false
+        },
         catalogs: []
     };
 }
@@ -106,6 +131,7 @@ function renderLandingHtml(host) {
     const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
     const manifestUrl = `${protocol}://${host}/manifest.json`;
     const stremioProtocolUrl = `stremio://${host}/manifest.json`;
+    const stremioWebUrl = `https://web.stremio.com/#/addons?addon=${encodeURIComponent(manifestUrl)}`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -118,7 +144,7 @@ function renderLandingHtml(host) {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #0f0c1b 0%, #000000 100%);
+            background: linear-gradient(135deg, #0b0914 0%, #000000 100%);
             color: #ffffff;
             min-height: 100vh;
             display: flex;
@@ -128,35 +154,36 @@ function renderLandingHtml(host) {
             padding: 24px;
         }
         .card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 215, 0, 0.25);
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.1);
-            border-radius: 20px;
-            max-width: 620px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 215, 0, 0.28);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 215, 0, 0.12);
+            border-radius: 24px;
+            max-width: 640px;
             width: 100%;
-            padding: 36px;
+            padding: 40px 32px;
             text-align: center;
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(14px);
         }
         .logo-img {
-            width: 96px;
-            height: 96px;
-            border-radius: 20px;
+            width: 100px;
+            height: 100px;
+            border-radius: 22px;
             object-fit: cover;
             border: 2px solid #FFD700;
-            box-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.45);
             margin-bottom: 20px;
         }
         h1 {
-            font-size: 28px;
+            font-size: 30px;
             font-weight: 800;
             background: linear-gradient(90deg, #FFD700, #FFA500);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
+            letter-spacing: -0.5px;
         }
         p.subtitle {
-            color: #b0b0b0;
+            color: #b5b5c0;
             font-size: 15px;
             margin-bottom: 24px;
             line-height: 1.5;
@@ -168,7 +195,7 @@ function renderLandingHtml(host) {
             background: rgba(34, 197, 94, 0.15);
             border: 1px solid #22c55e;
             color: #4ade80;
-            padding: 6px 14px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 13px;
             font-weight: 600;
@@ -185,51 +212,68 @@ function renderLandingHtml(host) {
             display: flex;
             flex-direction: column;
             gap: 12px;
-            margin-bottom: 30px;
+            margin-bottom: 28px;
         }
         .btn-primary {
             background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%);
             color: #000000;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 16px;
-            padding: 14px 24px;
-            border-radius: 12px;
+            padding: 15px 24px;
+            border-radius: 14px;
             text-decoration: none;
-            display: inline-block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
             transition: transform 0.2s, box-shadow 0.2s;
-            border: none;
-            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(255, 215, 0, 0.3);
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(255, 215, 0, 0.4);
+            box-shadow: 0 8px 24px rgba(255, 215, 0, 0.5);
         }
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
+        .btn-app {
+            background: rgba(255, 255, 255, 0.08);
             color: #ffffff;
             font-weight: 600;
             font-size: 14px;
             padding: 12px 20px;
             border-radius: 12px;
+            text-decoration: none;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            cursor: pointer;
             transition: background 0.2s;
         }
+        .btn-app:hover {
+            background: rgba(255, 255, 255, 0.16);
+        }
+        .btn-secondary {
+            background: transparent;
+            color: #d1d5db;
+            font-weight: 500;
+            font-size: 13px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px dashed rgba(255, 215, 0, 0.35);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.18);
+            background: rgba(255, 215, 0, 0.08);
+            color: #FFD700;
         }
         .guide {
             text-align: left;
-            background: rgba(0, 0, 0, 0.35);
-            border-radius: 14px;
-            padding: 18px 20px;
-            margin-top: 10px;
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 16px;
+            padding: 20px 22px;
+            margin-top: 8px;
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
         .guide h3 {
             font-size: 15px;
             color: #FFD700;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -238,18 +282,21 @@ function renderLandingHtml(host) {
             padding-left: 20px;
             font-size: 13px;
             color: #cccccc;
-            line-height: 1.7;
+            line-height: 1.8;
+        }
+        .guide b {
+            color: #ffffff;
         }
         .code-box {
             background: #111;
-            padding: 8px 12px;
-            border-radius: 6px;
+            padding: 10px 14px;
+            border-radius: 8px;
             font-family: monospace;
             font-size: 12px;
             color: #FFD700;
             word-break: break-all;
-            margin-top: 8px;
-            border: 1px dashed rgba(255, 215, 0, 0.4);
+            margin-top: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
         }
     </style>
 </head>
@@ -257,23 +304,26 @@ function renderLandingHtml(host) {
     <div class="card">
         <img class="logo-img" src="${BRAND_LOGO}" alt="Yogesh Streamer Logo">
         <h1>Yogesh Streamer</h1>
-        <p class="subtitle">Official Multi-Device Addon for iPhone, iPad, Mac, Windows & Smart TVs.</p>
+        <p class="subtitle">Official Multi-Device Addon for iPhone, iPad, Mac, Windows, Android & Smart TVs.</p>
         
         <div class="status-badge">
-            <span class="status-dot"></span> 24/7 Cloud Bridge Active
+            <span class="status-dot"></span> 24/7 Stremio Cloud Addon Online
         </div>
 
         <div class="btn-group">
-            <a class="btn-primary" href="${stremioProtocolUrl}">🚀 Install Addon to Stremio</a>
+            <a class="btn-primary" href="${stremioWebUrl}" target="_blank">📱 1-Tap Install in Stremio Web (iOS / Mac / PC)</a>
+            <a class="btn-app" href="${stremioProtocolUrl}">🚀 Open in Stremio App (Android / Windows / Linux)</a>
             <button class="btn-secondary" onclick="navigator.clipboard.writeText('${manifestUrl}'); alert('Copied Manifest URL to Clipboard!')">📋 Copy Addon Manifest URL</button>
         </div>
 
         <div class="guide">
-            <h3>📱 Quick iOS (iPhone/iPad) Setup</h3>
+            <h3>📱 iPhone & iPad (iOS) 2-Minute Setup</h3>
             <ol>
-                <li>Install <b>Outplayer</b> or <b>VLC</b> from the App Store.</li>
-                <li>Open Safari, visit <b>web.stremio.com</b>, and tap <b>Add to Home Screen</b>.</li>
-                <li>Go to Stremio Addons, paste this URL, and tap Install:</li>
+                <li>Install <b>Outplayer</b> or <b>VLC</b> free from the iOS App Store.</li>
+                <li>In Safari on your iPhone, visit <b>web.stremio.com</b>.</li>
+                <li>Tap Safari Share button (square with arrow up) ➔ <b>Add to Home Screen</b>.</li>
+                <li>In Stremio Web: Go to <b>Settings ➔ Player</b> ➔ Set <i>External Player</i> to <b>Outplayer</b>.</li>
+                <li>Click the gold <b>"1-Tap Install"</b> button above, then tap <b>Install</b>!</li>
             </ol>
             <div class="code-box">${manifestUrl}</div>
         </div>
@@ -335,7 +385,13 @@ const server = http.createServer(async (req, res) => {
         }
 
         try {
-            const upstreamUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(type)}/${encodeURIComponent(id)}.json`;
+            // If type was requested as movie/series but upstream stores it under 'other' for cnc: IDs
+            let targetType = type;
+            if (id.startsWith('cnc:') && type === 'movie') {
+                targetType = 'other';
+            }
+
+            const upstreamUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(targetType)}/${encodeURIComponent(id)}.json`;
             const data = await fetchJson(upstreamUrl);
 
             let streams = Array.isArray(data?.streams) ? data.streams : [];
@@ -352,8 +408,15 @@ const server = http.createServer(async (req, res) => {
                 let title = stream.title || '';
                 title = title.replace(/CNCVerse Bridge/gi, 'Yogesh Streamer');
 
+                // Enforce HTTPS for proxy streams to prevent mixed content blocking on iOS/Web
+                let streamUrl = stream.url || '';
+                if (streamUrl.startsWith('http://cncverse.dpdns.org')) {
+                    streamUrl = streamUrl.replace('http://cncverse.dpdns.org', 'https://cncverse.dpdns.org');
+                }
+
                 return {
                     ...stream,
+                    url: streamUrl,
                     name,
                     title
                 };
@@ -372,10 +435,27 @@ const server = http.createServer(async (req, res) => {
     // Catalog route: /catalog/:type/:id.json or with extra args
     if (pathname.startsWith('/catalog/')) {
         try {
-            const upstreamUrl = `${UPSTREAM_RESOLVER}${pathname}`;
+            // If Stremio is requesting /catalog/movie/cnc_..._other.json, map to /catalog/other/cnc_..._other.json upstream
+            let mappedPath = pathname;
+            let isMovieMappedFromOther = false;
+            if (pathname.startsWith('/catalog/movie/') && pathname.includes('_other')) {
+                mappedPath = pathname.replace('/catalog/movie/', '/catalog/other/');
+                isMovieMappedFromOther = true;
+            }
+
+            const upstreamUrl = `${UPSTREAM_RESOLVER}${mappedPath}`;
             const data = await fetchJson(upstreamUrl);
+
+            let metas = Array.isArray(data?.metas) ? data.metas : [];
+            if (isMovieMappedFromOther) {
+                metas = metas.map(m => ({
+                    ...m,
+                    type: 'movie'
+                }));
+            }
+
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-            res.end(JSON.stringify(data || { metas: [] }));
+            res.end(JSON.stringify({ metas }));
         } catch (err) {
             console.error(`Error fetching catalog ${pathname}:`, err.message);
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -386,9 +466,33 @@ const server = http.createServer(async (req, res) => {
 
     // Meta route: /meta/:type/:id.json
     if (pathname.startsWith('/meta/')) {
+        const parts = pathname.replace('/meta/', '').replace('.json', '').split('/');
+        const type = parts[0];
+        const id = parts[1];
+        const rawId = decodeURIComponent(id || '');
+
+        // For IMDb titles (tt...), let Cinemeta handle metadata
+        if (rawId.startsWith('tt')) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ meta: null }));
+            return;
+        }
+
         try {
-            const upstreamUrl = `${UPSTREAM_RESOLVER}${pathname}`;
+            let mappedPath = pathname;
+            let isMovieMappedFromOther = false;
+            if (pathname.startsWith('/meta/movie/') && rawId.startsWith('cnc:')) {
+                mappedPath = `/meta/other/${encodeURIComponent(rawId)}.json`;
+                isMovieMappedFromOther = true;
+            }
+
+            const upstreamUrl = `${UPSTREAM_RESOLVER}${mappedPath}`;
             const data = await fetchJson(upstreamUrl);
+
+            if (data?.meta && (isMovieMappedFromOther || data.meta.type === 'other')) {
+                data.meta.type = 'movie';
+            }
+
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
             res.end(JSON.stringify(data || { meta: null }));
         } catch (err) {
