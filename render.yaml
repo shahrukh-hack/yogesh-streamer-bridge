@@ -9,4 +9,4 @@ services:
       - key: PORT
         value: 10000
       - key: APP_PIN
-        value: "778899"
+        sync: false

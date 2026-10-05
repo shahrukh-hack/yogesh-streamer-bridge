@@ -65,14 +65,14 @@
 
 | Parameter | Environment Variable | Default Value | Description |
 | :--- | :--- | :--- | :--- |
-| **Security PIN** | `APP_PIN` | `778899` | 6-digit secret access code required to open the app |
+| **Security PIN** | `APP_PIN` | *Configured by host* | Secret 6-digit access code required to open the app |
 | **Port** | `PORT` | `7000` (or `10000` on Render) | HTTP server port |
 | **Upstream** | `UPSTREAM_RESOLVER` | Configured Cloud Resolver | Upstream metadata and stream provider |
 
-### How to Change Your 6-Digit PIN:
-* **On cPanel**: In **Setup Node.js App**, under **Environment Variables**, set `APP_PIN=YOUR_NEW_CODE`.
-* **On Render**: Go to **Environment** tab in your dashboard and add `APP_PIN=YOUR_NEW_CODE`.
-* **In Code**: Edit the `const APP_PIN` declaration in [`server.js`](file:///server.js).
+### How to Configure Your Secret 6-Digit PIN:
+* **On cPanel**: In **Setup Node.js App**, under **Environment Variables**, add `APP_PIN` = `your_secret_6_digit_pin`.
+* **On Render**: In your dashboard, go to the **Environment** tab and add `APP_PIN` = `your_secret_6_digit_pin`.
+* **Locally / VPS**: Pass `APP_PIN` in your environment or launch command: `APP_PIN=your_secret_pin node server.js`.
 
 ---
 
@@ -111,7 +111,7 @@ Deploying on cPanel via CloudLinux Phusion Passenger provides **permanent 24/7 u
    * **Plan**: `Free`
 5. Under **Environment Variables**, add:
    * `PORT` = `10000`
-   * `APP_PIN` = `778899` *(or your custom 6-digit code)*
+   * `APP_PIN` = `your_secret_6_digit_pin`
 6. Click **Deploy Web Service**.
 
 > [!NOTE]
@@ -127,11 +127,11 @@ git clone https://github.com/shahrukh-hack/yogesh-streamer-bridge.git
 cd yogesh-streamer-bridge
 
 # 2. Run with Node.js
-APP_PIN=778899 PORT=7000 node server.js
+APP_PIN=your_secret_6_digit_pin PORT=7000 node server.js
 
 # Or run persistently with PM2:
 npm install -g pm2
-APP_PIN=778899 PORT=7000 pm2 start server.js --name "yogesh-streamer"
+APP_PIN=your_secret_6_digit_pin PORT=7000 pm2 start server.js --name "yogesh-streamer"
 ```
 
 ---
