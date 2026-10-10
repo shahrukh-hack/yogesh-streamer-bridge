@@ -8,6 +8,9 @@ const PORT = process.env.PORT || 7000;
 const UPSTREAM_RESOLVER = process.env.UPSTREAM_RESOLVER || 'https://cncverse.dpdns.org';
 const BRAND_LOGO = 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg';
 const APP_PIN = process.env.APP_PIN || '778899';
+const ANDROID_APK_URL = 'https://github.com/shahrukh-hack/yogesh-streamer-multiplatform/releases/download/v1.4.2/YogeshStreamer-v1.4.2.apk';
+const ANDROID_RELEASES_URL = 'https://github.com/shahrukh-hack/yogesh-streamer-multiplatform/releases';
+const ANDROID_SHORT_URL = 'tinyurl.com/y-streamer-apk';
 
 // In-memory manifest cache
 let cachedManifest = null;
@@ -299,6 +302,25 @@ function renderLandingHtml(host) {
         .btn-app:hover {
             background: rgba(255, 255, 255, 0.16);
         }
+        .btn-android {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 16px;
+            padding: 15px 24px;
+            border-radius: 14px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+        }
+        .btn-android:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.6);
+        }
         .btn-secondary {
             background: transparent;
             color: #d1d5db;
@@ -366,9 +388,26 @@ function renderLandingHtml(host) {
             <a class="btn-primary" href="/app" style="background: linear-gradient(135deg, #00E5FF 0%, #0066FF 100%); color: #FFF; box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4);">
                 ✨ Launch Standalone Web App (No Stremio Needed)
             </a>
+            <a class="btn-android" href="${ANDROID_APK_URL}">
+                🤖 Download Native Android App (APK v1.4.2)
+            </a>
             <a class="btn-primary" href="${stremioWebUrl}" target="_blank">📱 1-Tap Install in Stremio Web (iOS / Mac / PC)</a>
             <a class="btn-app" href="${stremioProtocolUrl}">🚀 Open in Stremio App (Android / Windows / Linux)</a>
             <button class="btn-secondary" onclick="navigator.clipboard.writeText('${manifestUrl}'); alert('Copied Manifest URL to Clipboard!')">📋 Copy Addon Manifest URL</button>
+        </div>
+
+        <div class="guide" style="border-color: rgba(16, 185, 129, 0.4); margin-top: 14px; background: rgba(6, 78, 59, 0.15);">
+            <h3 style="color: #34d399;">🤖 Native Android App (Phone, Tablet, Google TV, Fire TV)</h3>
+            <p style="font-size: 13px; color: #b5b5c0; margin-bottom: 12px;">High-performance native Android app built with Google Media3 ExoPlayer hardware decoding for seamless 4K/1080p playback and live streams.</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="${ANDROID_APK_URL}" style="flex: 1; min-width: 170px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #fff; text-decoration: none; padding: 12px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; text-align: center; display: inline-block;">
+                    ⬇️ Download APK v1.4.2 (Direct)
+                </a>
+                <a href="${ANDROID_RELEASES_URL}" target="_blank" style="flex: 1; min-width: 140px; background: rgba(255,255,255,0.08); color: #fff; text-decoration: none; padding: 12px 16px; border-radius: 10px; font-weight: 600; font-size: 13px; text-align: center; border: 1px solid rgba(255,255,255,0.2); display: inline-block;">
+                    📦 GitHub Releases
+                </a>
+            </div>
+            <div class="code-box" style="border-color: rgba(16, 185, 129, 0.4); color: #4ade80;">TV Downloader short link: ${ANDROID_SHORT_URL}</div>
         </div>
 
         <div class="guide">
@@ -391,14 +430,24 @@ function renderLandingHtml(host) {
                     <span style="font-size: 11px; color: #aaa; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">1. Direct TV Browser App (Zero Install):</span>
                     <div style="font-size: 16px; font-weight: 800; color: #00F0FF; font-family: monospace; margin-top: 4px;">tinyurl.com/y-stream-tv</div>
                 </div>
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 10px 14px; text-align: left;">
+                    <span style="font-size: 11px; color: #aaa; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">2. Android TV / Fire TV APK Download:</span>
+                    <div style="font-size: 16px; font-weight: 800; color: #10B981; font-family: monospace; margin-top: 4px;">${ANDROID_SHORT_URL}</div>
+                </div>
                 <div style="background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 10px; padding: 10px 14px; text-align: left;">
-                    <span style="font-size: 11px; color: #aaa; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">2. Stremio TV Addon Manifest:</span>
+                    <span style="font-size: 11px; color: #aaa; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">3. Stremio TV Addon Manifest:</span>
                     <div style="font-size: 16px; font-weight: 800; color: #FFD700; font-family: monospace; margin-top: 4px;">tinyurl.com/y-stremio-tv</div>
                 </div>
             </div>
-            <div style="text-align: center; margin-top: 14px;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https%3A%2F%2Ftinyurl.com%2Fy-stream-tv" alt="Scan to open on phone" style="width: 140px; height: 140px; border-radius: 12px; border: 2px solid #FFD700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); display: inline-block;">
-                <div style="font-size: 11px; color: #888; margin-top: 6px;">📷 Scan with Phone Camera to Open Instantly</div>
+            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 14px;">
+                <div style="text-align: center;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=https%3A%2F%2Ftinyurl.com%2Fy-stream-tv" alt="Scan to open web app" style="width: 120px; height: 120px; border-radius: 12px; border: 2px solid #00E5FF; box-shadow: 0 0 12px rgba(0, 229, 255, 0.3); display: inline-block;">
+                    <div style="font-size: 11px; color: #00E5FF; margin-top: 6px; font-weight: 700;">📱 Web App QR</div>
+                </div>
+                <div style="text-align: center;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=https%3A%2F%2Ftinyurl.com%2Fy-streamer-apk" alt="Scan to download APK" style="width: 120px; height: 120px; border-radius: 12px; border: 2px solid #10B981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.3); display: inline-block;">
+                    <div style="font-size: 11px; color: #34d399; margin-top: 6px; font-weight: 700;">🤖 Android APK QR</div>
+                </div>
             </div>
         </div>
     </div>
@@ -423,6 +472,13 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/' || pathname === '/index.html') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(renderLandingHtml(host));
+        return;
+    }
+
+    // Direct Android APK Download Redirect
+    if (pathname === '/apk' || pathname === '/download' || pathname === '/android' || pathname === '/app.apk') {
+        res.writeHead(302, { 'Location': ANDROID_APK_URL });
+        res.end();
         return;
     }
 
