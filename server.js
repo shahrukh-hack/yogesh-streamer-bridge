@@ -361,7 +361,10 @@ const server = http.createServer(async (req, res) => {
     // Standalone Web & iOS PWA Streaming App
     if (pathname === '/app' || pathname === '/watch' || pathname === '/app.html') {
         try {
-            const appHtml = fs.readFileSync(path.join(__dirname, 'app.html'), 'utf8');
+            const htmlPath = fs.existsSync(path.join(__dirname, 'app.html')) 
+                ? path.join(__dirname, 'app.html') 
+                : path.join(__dirname, 'index.html');
+            const appHtml = fs.readFileSync(htmlPath, 'utf8');
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(appHtml);
         } catch (e) {
@@ -369,6 +372,27 @@ const server = http.createServer(async (req, res) => {
             res.end('Error loading standalone app: ' + e.message);
         }
         return;
+    }
+
+    // Static assets (PWA icons, Service Worker)
+    if (['/sw.js', '/favicon.ico', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png'].includes(pathname)) {
+        const assetPath = path.join(__dirname, pathname.substring(1));
+        if (fs.existsSync(assetPath)) {
+            const ext = path.extname(assetPath);
+            const mimeTypes = {
+                '.js': 'application/javascript; charset=utf-8',
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.ico': 'image/x-icon',
+                '.svg': 'image/svg+xml'
+            };
+            res.writeHead(200, {
+                'Content-Type': mimeTypes[ext] || 'application/octet-stream',
+                'Access-Control-Allow-Origin': '*'
+            });
+            fs.createReadStream(assetPath).pipe(res);
+            return;
+        }
     }
 
     // Security PIN Verification Endpoint
@@ -444,6 +468,104 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    // HLS & Mixed Content Stream Proxy: /proxy/stream?url=<target_url>
+    if (pathname === '/proxy/stream') {
+        const targetUrl = parsedUrl.query.url;
+        if (!targetUrl) {
+            res.writeHead(400, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+            res.end('Missing stream url parameter');
+            return;
+        }
+
+        try {
+            const parsedTarget = url.parse(targetUrl);
+            const client = parsedTarget.protocol === 'https:' ? https : http;
+
+            const proxyReq = client.get(targetUrl, {
+                headers: {
+                    'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Accept': '*/*',
+                    'Referer': parsedTarget.protocol + '//' + parsedTarget.host + '/'
+                },
+                timeout: 20000
+            }, (proxyRes) => {
+                if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
+                    let redir = proxyRes.headers.location;
+                    if (redir.startsWith('/')) {
+                        redir = `${parsedTarget.protocol}//${parsedTarget.host}${redir}`;
+                    }
+                    res.writeHead(302, { 'Location': `/proxy/stream?url=${encodeURIComponent(redir)}`, 'Access-Control-Allow-Origin': '*' });
+                    res.end();
+                    return;
+                }
+
+                const contentType = proxyRes.headers['content-type'] || '';
+                const isM3u8 = contentType.includes('mpegurl') || targetUrl.includes('.m3u8');
+
+                if (isM3u8) {
+                    let playlistData = '';
+                    proxyRes.on('data', chunk => playlistData += chunk);
+                    proxyRes.on('end', () => {
+                        const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
+                        const lines = playlistData.split(/\r?\n/);
+                        const rewritten = lines.map(line => {
+                            const trimmed = line.trim();
+                            if (!trimmed || trimmed.startsWith('#')) return line;
+                            let fullChunk = trimmed;
+                            if (!fullChunk.startsWith('http://') && !fullChunk.startsWith('https://')) {
+                                fullChunk = baseUrl + fullChunk;
+                            }
+                            if (fullChunk.startsWith('http://')) {
+                                return `/proxy/stream?url=${encodeURIComponent(fullChunk)}`;
+                            }
+                            return fullChunk;
+                        });
+
+                        const out = rewritten.join('\n');
+                        res.writeHead(proxyRes.statusCode || 200, {
+                            'Content-Type': 'application/vnd.apple.mpegurl; charset=utf-8',
+                            'Access-Control-Allow-Origin': '*',
+                            'Cache-Control': 'no-cache'
+                        });
+                        res.end(out);
+                    });
+                } else {
+                    const headers = {
+                        'Content-Type': contentType || 'video/MP2T',
+                        'Access-Control-Allow-Origin': '*',
+                        'Cache-Control': 'no-cache'
+                    };
+                    if (proxyRes.headers['content-length']) {
+                        headers['Content-Length'] = proxyRes.headers['content-length'];
+                    }
+                    res.writeHead(proxyRes.statusCode || 200, headers);
+                    proxyRes.pipe(res);
+                }
+            });
+
+            proxyReq.on('error', err => {
+                console.error('Proxy error for', targetUrl, err.message);
+                if (!res.headersSent) {
+                    res.writeHead(502, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+                    res.end('Stream Proxy Error: ' + err.message);
+                }
+            });
+            proxyReq.on('timeout', () => {
+                proxyReq.destroy();
+                if (!res.headersSent) {
+                    res.writeHead(504, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+                    res.end('Stream Proxy Timeout');
+                }
+            });
+        } catch (e) {
+            if (!res.headersSent) {
+                res.writeHead(500, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+                res.end('Proxy failure: ' + e.message);
+            }
+        }
+        return;
+    }
+
     // Stream resolver route: /stream/:type/:id.json
     if (pathname.startsWith('/stream/')) {
         const afterPrefix = pathname.slice('/stream/'.length);
@@ -468,21 +590,38 @@ const server = http.createServer(async (req, res) => {
         }
 
         try {
-            // If type was requested as movie/series but upstream stores it under 'other' for cnc: IDs
             let targetType = type;
-            if (rawId.startsWith('cnc:') && (type === 'movie' || type === 'series')) {
-                targetType = 'other';
-            }
+            let data = null;
 
-            const upstreamUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`;
-            const data = await fetchJson(upstreamUrl);
+            // 1. Try requested targetType
+            try {
+                const upstreamUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`;
+                data = await fetchJson(upstreamUrl);
+            } catch (e) {}
+
+            // 2. If no streams returned, try fallback types (especially tv and other for live events and movies)
+            if ((!data || !Array.isArray(data.streams) || data.streams.length === 0) && rawId.startsWith('cnc:')) {
+                const altTypes = ['tv', 'other', 'movie', 'series'].filter(t => t !== targetType);
+                for (const alt of altTypes) {
+                    try {
+                        const altUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(alt)}/${encodeURIComponent(rawId)}.json`;
+                        const altData = await fetchJson(altUrl);
+                        if (altData && Array.isArray(altData.streams) && altData.streams.length > 0) {
+                            data = altData;
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            }
 
             let streams = Array.isArray(data?.streams) ? data.streams : [];
 
-            // Apply Luxury Yogesh Streamer Branding to all stream results
+            // 3. Filter out donation ads / externalUrl streams with no playable url
+            streams = streams.filter(s => s && s.url && typeof s.url === 'string' && s.url.trim().length > 0 && !s.externalUrl);
+
+            // 4. Apply Luxury Yogesh Streamer Branding and Mixed Content Proxy
             const brandedStreams = streams.map(stream => {
                 let name = stream.name || 'Yogesh Streamer';
-                // Replace any upstream provider or third-party bridge badges
                 name = name.replace(/•?\s*CNCVerse Bridge/gi, '• Yogesh Streamer');
                 if (!name.includes('Yogesh Streamer')) {
                     name = `🌟 [Yogesh Streamer] ${name}`;
@@ -491,10 +630,15 @@ const server = http.createServer(async (req, res) => {
                 let title = stream.title || '';
                 title = title.replace(/CNCVerse Bridge/gi, 'Yogesh Streamer');
 
-                // Enforce HTTPS for proxy streams to prevent mixed content blocking on iOS/Web
-                let streamUrl = stream.url || '';
+                let streamUrl = (stream.url || '').trim();
+
+                const isSecure = !host.includes('localhost') && !host.includes('127.0.0.1');
+                const proto = isSecure ? 'https' : 'http';
+
                 if (streamUrl.startsWith('http://cncverse.dpdns.org')) {
                     streamUrl = streamUrl.replace('http://cncverse.dpdns.org', 'https://cncverse.dpdns.org');
+                } else if (streamUrl.startsWith('http://')) {
+                    streamUrl = `${proto}://${host}/proxy/stream?url=${encodeURIComponent(streamUrl)}`;
                 }
 
                 return {
