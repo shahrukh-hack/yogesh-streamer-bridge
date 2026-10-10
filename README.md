@@ -13,7 +13,9 @@
 
 ---
 
-### 🌐 [Launch Live Web App](https://yogesh-streamer-bridge.onrender.com/app) • 📋 [Addon Manifest](https://yogesh-streamer-bridge.onrender.com/manifest.json)
+### 🌐 [Launch Live Web App](https://yogesh-streamer-bridge.onrender.com/app) • 📥 [Download Native Android APK (v1.4.2)](https://github.com/shahrukh-hack/yogesh-streamer-multiplatform/releases/download/v1.4.2/YogeshStreamer-v1.4.2.apk)
+#### 📺 Smart TV Quick Link: `tinyurl.com/y-stream-tv` • 📱 APK Direct Link: `tinyurl.com/y-streamer-apk`
+#### 📋 [Stremio Addon Manifest](https://yogesh-streamer-bridge.onrender.com/manifest.json)
 
 </div>
 
