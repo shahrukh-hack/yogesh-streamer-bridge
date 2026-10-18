@@ -2417,28 +2417,44 @@
                     }
                 });
 
-                // 🌟 Smart Prioritization: verified instant web-playable catalogs first
+                // 🌟 Smart Prioritization: verified working streaming catalogs first
                 movieCatalogs.sort((a, b) => {
-                    if (a.id === 'cnc_CastleTVUseVLC_other') return -1;
-                    if (b.id === 'cnc_CastleTVUseVLC_other') return 1;
-                    if (a.id === 'cnc_Kisskh_other') return -1;
-                    if (b.id === 'cnc_Kisskh_other') return 1;
-                    if (a.id === 'cnc_Movix_other') return -1;
-                    if (b.id === 'cnc_Movix_other') return 1;
+                    const topMovies = ['cnc_CastleTVUseVLC_other', 'cnc_HDHub4U_other', 'cnc_Rogmovies_other', 'cnc_ReANIME_Reanime_other', 'cnc_RingZ_other', 'cnc_MovieBoxIN_other', 'cnc_MultiMovies_other'];
+                    const idxA = topMovies.indexOf(a.id);
+                    const idxB = topMovies.indexOf(b.id);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
                     return 0;
                 });
 
                 seriesCatalogs.sort((a, b) => {
-                    if (a.id === 'cnc_Kisskh_other') return -1;
-                    if (b.id === 'cnc_Kisskh_other') return 1;
-                    if (a.id === 'cnc_CastleTVUseVLC_other') return -1;
-                    if (b.id === 'cnc_CastleTVUseVLC_other') return 1;
+                    const topSeries = ['cnc_CastleTVUseVLC_other', 'cnc_Rogmovies_other', 'cnc_MultiMovies_other', 'cnc_MovieBoxIN_other', 'cnc_Kisskh_other'];
+                    const idxA = topSeries.indexOf(a.id);
+                    const idxB = topSeries.indexOf(b.id);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
                     return 0;
                 });
 
                 sportsCatalogs.sort((a, b) => {
-                    if (a.id === 'cnc_SportzXLiveEvents_tv') return -1;
-                    if (b.id === 'cnc_SportzXLiveEvents_tv') return 1;
+                    const topSports = ['cnc_PlayFyLiveEvents_tv', 'cnc_PlayFyHighlights_tv', 'cnc_LivXowLiveEvents_tv', 'cnc_PlayZTVLiveEvents_tv', 'cnc_SportzXLiveEvents_tv'];
+                    const idxA = topSports.indexOf(a.id);
+                    const idxB = topSports.indexOf(b.id);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                    return 0;
+                });
+
+                liveTvCatalogs.sort((a, b) => {
+                    const topTv = ['cnc_JIOTVPlusWW_tv', 'cnc_IPTV_tv'];
+                    const idxA = topTv.indexOf(a.id);
+                    const idxB = topTv.indexOf(b.id);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
                     return 0;
                 });
 
@@ -2636,6 +2652,7 @@
                     const res = await fetch(`${API_BASE}${path}`);
                     const data = await res.json();
                     metas = Array.isArray(data?.metas) ? data.metas : [];
+                    metas = metas.filter(m => m && m.name && m.name.trim() !== '' && m.name.trim() !== '⠀');
                     catalogItemCache[cat.id] = metas;
 
                     // Add to universal search index
@@ -2661,7 +2678,8 @@
                 track.setAttribute('data-loaded', 'true');
 
                 if (metas.length === 0) {
-                    track.innerHTML = '<div style="color: var(--text-sub); font-size: 13px; padding: 14px;">No titles available right now.</div>';
+                    const rowContainer = track.closest('.catalog-row-section') || track.parentElement;
+                    if (rowContainer) rowContainer.style.display = 'none';
                     return;
                 }
 

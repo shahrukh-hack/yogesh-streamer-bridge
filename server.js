@@ -101,17 +101,24 @@ async function getRebrandedManifest() {
                 };
             });
 
-            // Priority sorting: verified web-ready HLS catalogs & live sports first
+            // Priority sorting: verified working streaming catalogs & live sports first
             const priorityIds = [
                 'cnc_CastleTVUseVLC_other',
-                'cnc_Kisskh_other',
+                'cnc_PlayFyLiveEvents_tv',
+                'cnc_PlayFyHighlights_tv',
+                'cnc_HDHub4U_other',
+                'cnc_Rogmovies_other',
+                'cnc_LivXowLiveEvents_tv',
+                'cnc_PlayZTVLiveEvents_tv',
+                'cnc_JIOTVPlusWW_tv',
+                'cnc_ReANIME_Reanime_other',
+                'cnc_RingZ_other',
+                'cnc_IPTV_tv',
+                'cnc_MovieBoxIN_other',
+                'cnc_MultiMovies_other',
                 'cnc_SportzXLiveEvents_tv',
                 'cnc_SportzXHighlights_tv',
-                'cnc_PlayZTVLiveEvents_tv',
-                'cnc_LivXowLiveEvents_tv',
-                'cnc_MovieBoxIN_other',
-                'cnc_Movix_other',
-                'cnc_MultiMovies_other'
+                'cnc_Kisskh_other'
             ];
 
             rebrandedCatalogs.sort((a, b) => {
@@ -605,11 +612,14 @@ const server = http.createServer(async (req, res) => {
             const parsedTarget = url.parse(targetUrl);
             const client = parsedTarget.protocol === 'https:' ? https : http;
 
+            const targetReferer = parsedUrl.query.referer || (parsedTarget.protocol + '//' + parsedTarget.host + '/');
+            const targetUa = parsedUrl.query.ua || req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
             const proxyReq = client.get(targetUrl, {
                 headers: {
-                    'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'User-Agent': targetUa,
                     'Accept': '*/*',
-                    'Referer': parsedTarget.protocol + '//' + parsedTarget.host + '/'
+                    'Referer': targetReferer
                 },
                 timeout: 20000
             }, (proxyRes) => {
@@ -618,7 +628,9 @@ const server = http.createServer(async (req, res) => {
                     if (redir.startsWith('/')) {
                         redir = `${parsedTarget.protocol}//${parsedTarget.host}${redir}`;
                     }
-                    res.writeHead(302, { 'Location': `/proxy/stream?url=${encodeURIComponent(redir)}`, 'Access-Control-Allow-Origin': '*' });
+                    const refQ = parsedUrl.query.referer ? `&referer=${encodeURIComponent(parsedUrl.query.referer)}` : '';
+                    const uaQ = parsedUrl.query.ua ? `&ua=${encodeURIComponent(parsedUrl.query.ua)}` : '';
+                    res.writeHead(302, { 'Location': `/proxy/stream?url=${encodeURIComponent(redir)}${refQ}${uaQ}`, 'Access-Control-Allow-Origin': '*' });
                     res.end();
                     return;
                 }
@@ -632,6 +644,8 @@ const server = http.createServer(async (req, res) => {
                     proxyRes.on('end', () => {
                         const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
                         const lines = playlistData.split(/\r?\n/);
+                        const extraParams = (parsedUrl.query.referer ? `&referer=${encodeURIComponent(parsedUrl.query.referer)}` : '') +
+                                            (parsedUrl.query.ua ? `&ua=${encodeURIComponent(parsedUrl.query.ua)}` : '');
                         const rewritten = lines.map(line => {
                             const trimmed = line.trim();
                             if (!trimmed || trimmed.startsWith('#')) return line;
@@ -639,8 +653,8 @@ const server = http.createServer(async (req, res) => {
                             if (!fullChunk.startsWith('http://') && !fullChunk.startsWith('https://')) {
                                 fullChunk = baseUrl + fullChunk;
                             }
-                            if (fullChunk.startsWith('http://')) {
-                                return `/proxy/stream?url=${encodeURIComponent(fullChunk)}`;
+                            if (fullChunk.startsWith('http://') || parsedUrl.query.referer) {
+                                return `/proxy/stream?url=${encodeURIComponent(fullChunk)}${extraParams}`;
                             }
                             return fullChunk;
                         });
@@ -776,10 +790,17 @@ const server = http.createServer(async (req, res) => {
                 const isSecure = !host.includes('localhost') && !host.includes('127.0.0.1');
                 const proto = isSecure ? 'https' : 'http';
 
+                const reqHeaders = stream.behaviorHints?.proxyHeaders?.request || {};
+                const streamReferer = reqHeaders.Referer || reqHeaders.referer || '';
+                const streamUa = reqHeaders['User-Agent'] || reqHeaders['user-agent'] || '';
+
                 if (streamUrl.startsWith('http://cncverse.dpdns.org')) {
                     streamUrl = streamUrl.replace('http://cncverse.dpdns.org', 'https://cncverse.dpdns.org');
-                } else if (streamUrl.startsWith('http://')) {
-                    streamUrl = `${proto}://${host}/proxy/stream?url=${encodeURIComponent(streamUrl)}`;
+                } else if (streamUrl.startsWith('http://') || streamReferer) {
+                    let proxyParams = `url=${encodeURIComponent(streamUrl)}`;
+                    if (streamReferer) proxyParams += `&referer=${encodeURIComponent(streamReferer)}`;
+                    if (streamUa) proxyParams += `&ua=${encodeURIComponent(streamUa)}`;
+                    streamUrl = `${proto}://${host}/proxy/stream?${proxyParams}`;
                 }
 
                 return {
