@@ -790,13 +790,29 @@ const server = http.createServer(async (req, res) => {
                 title = title.replace(/CNCVerse Bridge/gi, 'Yogesh Streamer');
 
                 let streamUrl = (stream.url || '').trim();
-                const lowerUrl = streamUrl.toLowerCase();
+
+                // 🚀 Extract direct MPEG-DASH MPD and ClearKey if wrapped by upstream HLS converter
+                let directMpd = null;
+                let clearkey = stream.clearkey || null;
+                const dMatch = streamUrl.match(/[?&]d=([^&]+)/);
+                if (dMatch && dMatch[1]) {
+                    directMpd = decodeURIComponent(dMatch[1]);
+                }
+                if (!clearkey) {
+                    const kMatch = streamUrl.match(/[?&]clearkey=([^&]+)/);
+                    if (kMatch && kMatch[1]) {
+                        clearkey = decodeURIComponent(kMatch[1]);
+                    }
+                }
+
+                const lowerUrl = (directMpd || streamUrl).toLowerCase();
                 const isMkv = lowerUrl.includes('.mkv') || lowerUrl.includes('pub-') || lowerUrl.includes('r2.dev');
                 const isHls = lowerUrl.includes('.m3u8') || lowerUrl.includes('klnwm.com') || lowerUrl.includes('hlscob.com') || lowerUrl.includes('kwsvon.com') || lowerUrl.includes('mlcoxn.com') || lowerUrl.includes('cdnvideo11.shop');
+                const isDash = lowerUrl.includes('.mpd');
 
                 if (isMkv) {
                     name = `🚀 [MKV / VLC] ${name}`;
-                } else if (isHls) {
+                } else if (isHls || isDash) {
                     name = `⚡ [Web Play] ${name}`;
                 } else {
                     name = `🎬 ${name}`;
@@ -809,18 +825,25 @@ const server = http.createServer(async (req, res) => {
                 const streamReferer = reqHeaders.Referer || reqHeaders.referer || '';
                 const streamUa = reqHeaders['User-Agent'] || reqHeaders['user-agent'] || '';
 
-                if (streamUrl.startsWith('http://cncverse.dpdns.org')) {
-                    streamUrl = streamUrl.replace('http://cncverse.dpdns.org', 'https://cncverse.dpdns.org');
+                let finalPlayUrl = streamUrl;
+                if (directMpd && directMpd.startsWith('https://')) {
+                    // Origin Amazon Prime DASH CDN is HTTPS and supports direct CORS
+                    finalPlayUrl = directMpd;
+                } else if (streamUrl.startsWith('http://cncverse.dpdns.org')) {
+                    finalPlayUrl = streamUrl.replace('http://cncverse.dpdns.org', 'https://cncverse.dpdns.org');
                 } else if (streamUrl.startsWith('http://') || streamReferer) {
                     let proxyParams = `url=${encodeURIComponent(streamUrl)}`;
                     if (streamReferer) proxyParams += `&referer=${encodeURIComponent(streamReferer)}`;
                     if (streamUa) proxyParams += `&ua=${encodeURIComponent(streamUa)}`;
-                    streamUrl = `${proto}://${host}/proxy/stream?${proxyParams}`;
+                    finalPlayUrl = `${proto}://${host}/proxy/stream?${proxyParams}`;
                 }
 
                 return {
                     ...stream,
-                    url: streamUrl,
+                    url: finalPlayUrl,
+                    hlsUrl: streamUrl,
+                    mpdUrl: directMpd,
+                    clearkey: clearkey,
                     name,
                     title,
                     isMkv,

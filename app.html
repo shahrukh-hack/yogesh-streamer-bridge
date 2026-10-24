@@ -2340,6 +2340,7 @@
 
         // 🌟 Verified 100% 24/7 Direct Working Live Indian TV Feeds
         const VERIFIED_LIVE_CHANNELS = [
+            { name: "🔴 New Zealand vs India (Live Match)", cat: "SPORTS", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "1080p 60fps Direct" },
             { name: "DD Sports 1 HD (Live Cricket)", cat: "SPORTS", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "1080p 60fps" },
             { name: "A Sports HD (Live Cricket)", cat: "SPORTS", url: "https://playztv-apps.pages.dev/a-sports/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "1080p HD" },
             { name: "PTV Sports HD (Live Cricket)", cat: "SPORTS", url: "https://playztv-apps.pages.dev/ptv-sports/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "720p HD" },
@@ -2353,6 +2354,7 @@
 
         // 🌟 Verified Working Sports Feeds
         const VERIFIED_SPORTS_EVENTS = [
+            { title: "🔴 New Zealand vs India (Live Match Feed)", tour: "India Tour of NZ (Live Broadcast)", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8" },
             { title: "DD Sports 1 HD (Live Cricket & National Sports)", tour: "Team India & Major Tournaments", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8" },
             { title: "A Sports HD (Live Cricket Broadcast)", tour: "T20 Leagues & Bilateral Tours", url: "https://playztv-apps.pages.dev/a-sports/index.m3u8" },
             { title: "PTV Sports HD (Live Cricket & International Series)", tour: "Global Cricket & Bilateral Series", url: "https://playztv-apps.pages.dev/ptv-sports/index.m3u8" },
@@ -2991,7 +2993,7 @@
             if (u.includes('.mkv') || u.includes('pub-') || u.includes('.r2.dev') || (u.includes('worker') && u.includes('.mkv'))) {
                 return false;
             }
-            if (u.includes('.m3u8') || u.includes('.mp4') || u.includes('.webm') || u.includes('/proxy/stream')) {
+            if (u.includes('.m3u8') || u.includes('.mp4') || u.includes('.webm') || u.includes('.mpd') || u.includes('/proxy/stream')) {
                 return true;
             }
             if (u.includes('klnwm.com') || u.includes('hlscob.com') || u.includes('kwsvon.com') || u.includes('mlcoxn.com') || u.includes('cdnvideo11.shop')) {
@@ -3303,29 +3305,97 @@
             const activeClearkey = (activeStream && activeStream.clearkey) ? activeStream.clearkey : null;
 
             // 🚀 Google Shaka Player Engine for MPEG-DASH & ClearKey Streams (PlayFy & SportzX)
-            const mpdMatch = finalUrl.match(/[?&]d=([^&]+)/);
-            const isDashClearkey = activeClearkey && (mpdMatch || finalUrl.includes('.mpd'));
+            // Unwrap any proxy/stream wrappers to locate origin MPD and ClearKeys
+            let decodedUrl = finalUrl;
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const next = decodeURIComponent(decodedUrl);
+                    if (next === decodedUrl) break;
+                    decodedUrl = next;
+                } catch(e) { break; }
+            }
+
+            let directMpd = (activeStream && activeStream.mpdUrl) ? activeStream.mpdUrl : null;
+            if (!directMpd) {
+                const dParamMatch = decodedUrl.match(/[?&]d=([^&]+)/);
+                if (dParamMatch && dParamMatch[1]) {
+                    directMpd = dParamMatch[1].trim();
+                } else if (decodedUrl.includes('.mpd')) {
+                    const mpdIdx = decodedUrl.indexOf('.mpd');
+                    const httpIdx = decodedUrl.lastIndexOf('http', mpdIdx);
+                    if (httpIdx !== -1) {
+                        directMpd = decodedUrl.substring(httpIdx, mpdIdx + 4);
+                    } else {
+                        directMpd = decodedUrl;
+                    }
+                }
+            }
+
+            let effectiveClearkey = activeClearkey;
+            if (!effectiveClearkey) {
+                const keyParamMatch = decodedUrl.match(/[?&]clearkey=([^&]+)/);
+                if (keyParamMatch && keyParamMatch[1]) {
+                    effectiveClearkey = keyParamMatch[1].trim();
+                }
+            }
+
+            const isDashClearkey = directMpd && (effectiveClearkey || directMpd.includes('.mpd'));
 
             if (isDashClearkey && window.shaka && shaka.Player && shaka.Player.isBrowserSupported()) {
                 try {
                     shaka.polyfill.installAll();
-                    let directMpd = mpdMatch ? decodeURIComponent(mpdMatch[1]) : finalUrl;
-                    const parts = activeClearkey.split(':');
-
                     currentShakaPlayer = new shaka.Player(video);
-                    if (parts.length === 2) {
-                        currentShakaPlayer.configure({
-                            drm: {
-                                clearKeys: {
-                                    [parts[0]]: parts[1]
-                                }
-                            },
-                            streaming: {
-                                bufferingGoal: 10,
-                                rebufferingGoal: 2
+
+                    const clearKeysMap = {};
+                    if (effectiveClearkey) {
+                        const parts = effectiveClearkey.split(':');
+                        if (parts.length === 2) {
+                            const kid = parts[0].trim();
+                            const key = parts[1].trim();
+                            const cleanKid = kid.replace(/-/g, '').toLowerCase();
+                            const cleanKey = key.replace(/-/g, '').toLowerCase();
+                            clearKeysMap[cleanKid] = cleanKey;
+                            clearKeysMap[cleanKid.toUpperCase()] = cleanKey;
+                            if (cleanKid.length === 32) {
+                                const uuidKid = `${cleanKid.slice(0,8)}-${cleanKid.slice(8,12)}-${cleanKid.slice(12,16)}-${cleanKid.slice(16,20)}-${cleanKid.slice(20)}`;
+                                clearKeysMap[uuidKid] = cleanKey;
+                                clearKeysMap[uuidKid.toUpperCase()] = cleanKey;
                             }
-                        });
+                        }
                     }
+
+                    // Register response filter to inject ClearKey ContentProtection if missing from Amazon Prime MPD
+                    currentShakaPlayer.getNetworkingEngine().registerResponseFilter((type, response) => {
+                        if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
+                            try {
+                                let text = shaka.util.StringUtils.fromUTF8(response.data);
+                                if (!text.includes('1077efec-c0b2-4d02-ace3-3c1e52e2fb4b')) {
+                                    const clearkeyTag = '<ContentProtection schemeIdUri="urn:uuid:1077efec-c0b2-4d02-ace3-3c1e52e2fb4b" value="ClearKey"/>';
+                                    text = text.replace(/<ContentProtection [^>]*value="cenc"[^>]*\/>/g, (m) => m + '\n' + clearkeyTag);
+                                    response.data = shaka.util.StringUtils.toUTF8(text);
+                                }
+                            } catch (filterErr) {}
+                        }
+                    });
+
+                    currentShakaPlayer.configure({
+                        drm: {
+                            clearKeys: clearKeysMap
+                        },
+                        streaming: {
+                            bufferingGoal: 10,
+                            rebufferingGoal: 2,
+                            jumpLargeGaps: true,
+                            stallEnabled: true,
+                            inaccurateManifestTolerance: 2
+                        },
+                        manifest: {
+                            dash: {
+                                ignoreMinBufferTime: true,
+                                autoCorrectDrift: true
+                            }
+                        }
+                    });
 
                     currentShakaPlayer.addEventListener('error', (e) => {
                         console.warn('Shaka Player error:', e);
