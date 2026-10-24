@@ -6,7 +6,7 @@
     <title>Yogesh Streamer • Universal Cinema & Live TV</title>
 
     <!-- PWA & Mobile Web App Meta Tags -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/manifest.webmanifest">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -2086,6 +2086,9 @@
             <div id="player-audio-switch-btn" class="focusable" tabindex="0" style="display:none; cursor:pointer; font-size:11px; color:#38bdf8; font-weight:800; border:1px solid rgba(56,189,248,0.4); padding:4px 12px; border-radius:20px; background:rgba(0,0,0,0.6); align-items:center; gap:6px;" onclick="switchAudioTrack()">
                 <i class="fas fa-volume-up"></i> <span id="player-audio-label">Audio: Default</span>
             </div>
+            <div id="player-pip-btn" class="focusable" tabindex="0" style="cursor:pointer; font-size:11px; color:#a78bfa; font-weight:800; border:1px solid rgba(167,139,250,0.4); padding:4px 12px; border-radius:20px; background:rgba(0,0,0,0.6); display:flex; align-items:center; gap:6px;" onclick="togglePictureInPicture()" title="Picture-in-Picture">
+                <i class="fas fa-clone"></i> <span>PiP</span>
+            </div>
             <div style="font-size: 11px; color: var(--cyan); font-weight: 800;">1080p Ultra HD • HLS Direct</div>
         </div>
         <div class="player-viewport" id="player-screen-wrap"></div>
@@ -3213,6 +3216,11 @@
             currentPlayingUrl = url;
             updateServerSwitchUI();
 
+            // Auto-lock mobile orientation to landscape when playback begins
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+
             document.getElementById('player-stream-title').innerText = cleanTitle(title);
             const container = document.getElementById('player-screen-wrap');
             container.innerHTML = `
@@ -3581,6 +3589,16 @@
             updateAudioTrackUI();
         }
 
+        function togglePictureInPicture() {
+            const video = document.querySelector('#player-screen-wrap video');
+            if (!video) return;
+            if (document.pictureInPictureElement) {
+                document.exitPictureInPicture().catch(() => {});
+            } else if (video.requestPictureInPicture) {
+                video.requestPictureInPicture().catch(() => {});
+            }
+        }
+
         async function closeCinemaPlayer() {
             if (currentHlsEngine) {
                 currentHlsEngine.destroy();
@@ -3592,6 +3610,9 @@
                 } catch(e) {}
                 currentShakaPlayer = null;
             }
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock().catch(() => {});
+            }
             const audioBtn = document.getElementById('player-audio-switch-btn');
             if (audioBtn) audioBtn.style.display = 'none';
             activeStreamList = [];
@@ -3602,7 +3623,8 @@
             document.getElementById('cinema-player-modal').classList.remove('open');
         }
 
-        // 📺 2D Spatial Smart TV Remote Navigation Engine (Samsung Tizen, Toshiba, LG, Android TV)
+        // 📺 Universal 2D Spatial Remote & Desktop Keyboard Navigation Engine
+        // Supports Samsung Tizen, LG webOS, Android TV, Fire TV Stick, Windows, macOS, Linux
         window.addEventListener('keydown', (e) => {
             const keyCode = e.keyCode || e.which;
             const isPlayerOpen = document.getElementById('cinema-player-modal').classList.contains('open');
@@ -3642,8 +3664,9 @@
                 return;
             }
 
-            // Handle Back / Return Key on TV Remotes (Tizen: 10009, Android/Esc: 27)
-            if (keyCode === 27 || keyCode === 10009) {
+            // Universal Back Key (Tizen: 10009, webOS: 461, Esc: 27, Backspace: 8)
+            const isBackKey = keyCode === 27 || keyCode === 10009 || keyCode === 461 || (keyCode === 8 && !document.activeElement?.matches('input, textarea'));
+            if (isBackKey) {
                 if (isPlayerOpen) {
                     closeCinemaPlayer();
                     e.preventDefault();
@@ -3662,13 +3685,38 @@
                 }
             }
 
-            // In-Player Remote Controls
+            // In-Player Remote & Desktop Hotkey Controls
             if (isPlayerOpen) {
                 const video = document.querySelector('video');
                 if (!video) return;
-                // OK / Enter: Toggle Play / Pause
-                if (keyCode === 13) {
+                // OK / Enter / Space: Toggle Play / Pause
+                if (keyCode === 13 || keyCode === 32) {
                     if (video.paused) video.play(); else video.pause();
+                    e.preventDefault();
+                }
+                // F Key: Toggle Fullscreen
+                else if (keyCode === 70 || keyCode === 102) {
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(() => {});
+                    } else {
+                        document.getElementById('cinema-player-modal').requestFullscreen().catch(() => {});
+                    }
+                    e.preventDefault();
+                }
+                // M Key: Toggle Mute
+                else if (keyCode === 77 || keyCode === 109) {
+                    video.muted = !video.muted;
+                    e.preventDefault();
+                }
+                // Up Arrow: Volume + 10%
+                else if (keyCode === 38) {
+                    video.volume = Math.min(1, video.volume + 0.1);
+                    video.muted = false;
+                    e.preventDefault();
+                }
+                // Down Arrow: Volume - 10%
+                else if (keyCode === 40) {
+                    video.volume = Math.max(0, video.volume - 0.1);
                     e.preventDefault();
                 }
                 // Left Arrow: Seek -10s
@@ -3764,7 +3812,7 @@
 
             if (bestCandidate) {
                 bestCandidate.focus();
-                bestCandidate.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                bestCandidate.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
                 event.preventDefault();
             }
         }
