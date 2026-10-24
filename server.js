@@ -17,6 +17,10 @@ let cachedManifest = null;
 let lastManifestFetch = 0;
 const MANIFEST_CACHE_TTL = 1800000; // 30 minutes
 
+// In-memory stream resolution cache (5 minutes TTL for instant response)
+const streamCache = new Map();
+const STREAM_CACHE_TTL = 300000; // 5 minutes
+
 function fetchJson(targetUrl) {
     return new Promise((resolve, reject) => {
         const parsed = url.parse(targetUrl);
@@ -27,7 +31,7 @@ function fetchJson(targetUrl) {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'application/json, text/plain, */*'
             },
-            timeout: 15000
+            timeout: 10000
         }, (res) => {
             if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                 return fetchJson(res.headers.location).then(resolve).catch(reject);
@@ -742,29 +746,41 @@ const server = http.createServer(async (req, res) => {
             return;
         }
 
+        // ⚡ In-Memory Stream Cache Check (0ms Instant Delivery)
+        const cacheKey = `${type}:${rawId}`;
+        const cached = streamCache.get(cacheKey) || streamCache.get(rawId);
+        if (cached && (Date.now() - cached.timestamp < STREAM_CACHE_TTL)) {
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ streams: cached.streams }));
+            return;
+        }
+
         try {
-            let targetType = type;
             let data = null;
 
-            // 1. Try requested targetType
-            try {
-                const upstreamUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`;
-                data = await fetchJson(upstreamUrl);
-            } catch (e) {}
-
-            // 2. If no streams returned, try fallback types (especially tv and other for live events and movies)
-            if ((!data || !Array.isArray(data.streams) || data.streams.length === 0) && rawId.startsWith('cnc:')) {
-                const altTypes = ['tv', 'other', 'movie', 'series'].filter(t => t !== targetType);
-                for (const alt of altTypes) {
-                    try {
-                        const altUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(alt)}/${encodeURIComponent(rawId)}.json`;
-                        const altData = await fetchJson(altUrl);
-                        if (altData && Array.isArray(altData.streams) && altData.streams.length > 0) {
-                            data = altData;
-                            break;
-                        }
-                    } catch (e) {}
+            // 🎯 Type Candidate Ordering: Upstream CNCVerse registers movie & web series catalogs
+            // under "other", while live sports/TV are under "tv". Querying "other" first for movies/series
+            // eliminates 15s-30s upstream timeouts!
+            let candidateTypes = [type];
+            if (rawId.startsWith('cnc:')) {
+                if (type === 'tv') {
+                    candidateTypes = ['tv', 'other'];
+                } else {
+                    candidateTypes = ['other', 'movie', 'tv', 'series'];
                 }
+            } else {
+                candidateTypes = [type, 'movie', 'series', 'other'].filter((v, i, a) => a.indexOf(v) === i);
+            }
+
+            for (const cand of candidateTypes) {
+                try {
+                    const upstreamUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(cand)}/${encodeURIComponent(rawId)}.json`;
+                    const result = await fetchJson(upstreamUrl);
+                    if (result && Array.isArray(result.streams) && result.streams.length > 0) {
+                        data = result;
+                        break;
+                    }
+                } catch (e) {}
             }
 
             let streams = Array.isArray(data?.streams) ? data.streams : [];
@@ -838,6 +854,20 @@ const server = http.createServer(async (req, res) => {
                     finalPlayUrl = `${proto}://${host}/proxy/stream?${proxyParams}`;
                 }
 
+                // Sanitize Subtitle URLs to prevent Mixed Content blocking over HTTPS
+                const sanitizedSubtitles = Array.isArray(stream.subtitles) ? stream.subtitles.map(sub => {
+                    let subUrl = (sub && sub.url) ? sub.url.trim() : '';
+                    if (subUrl.startsWith('http://140.238.244.130')) {
+                        subUrl = subUrl.replace('http://140.238.244.130', 'https://cncverse.dpdns.org');
+                    } else if (subUrl.startsWith('http://')) {
+                        subUrl = `${proto}://${host}/proxy/stream?url=${encodeURIComponent(subUrl)}`;
+                    }
+                    return {
+                        ...sub,
+                        url: subUrl
+                    };
+                }) : [];
+
                 return {
                     ...stream,
                     url: finalPlayUrl,
@@ -847,9 +877,22 @@ const server = http.createServer(async (req, res) => {
                     name,
                     title,
                     isMkv,
-                    isWebPlayable: !isMkv
+                    isWebPlayable: !isMkv,
+                    subtitles: sanitizedSubtitles
                 };
             });
+
+            // Save to in-memory cache if streams found
+            if (brandedStreams.length > 0) {
+                streamCache.set(cacheKey, {
+                    streams: brandedStreams,
+                    timestamp: Date.now()
+                });
+                streamCache.set(rawId, {
+                    streams: brandedStreams,
+                    timestamp: Date.now()
+                });
+            }
 
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
             res.end(JSON.stringify({ streams: brandedStreams }));
