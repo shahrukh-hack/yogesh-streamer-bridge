@@ -2338,7 +2338,8 @@
         const VERIFIED_LIVE_CHANNELS = [
             { name: "Willow Cricket HD", cat: "SPORTS", url: "https://baila-lentoo.pages.dev/all-sp/809386.m3u8", logo: "https://s21.q4cdn.com/819998841/files/doc_news/2024/May/Willow-logo-transparent-cb.png", quality: "1080p 60fps" },
             { name: "A Sports HD (Live Cricket)", cat: "SPORTS", url: "https://playztv-apps.pages.dev/a-sports/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "1080p HD" },
-            { name: "Fancode Cricket Live", cat: "SPORTS", url: "https://dai-fancode.pages.dev/mumbai/4249693_english_hls_aaca093f3b68270_1ta-di_h264/index.m3u8", logo: "https://m.media-amazon.com/images/I/21K+HipHr6L.png", quality: "1080p HD" },
+            { name: "PTV Sports HD (Live Cricket)", cat: "SPORTS", url: "https://playztv-apps.pages.dev/ptv-sports/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "720p HD" },
+            { name: "Willow Cricket Live Feed 2", cat: "SPORTS", url: "https://baila-lentoo.pages.dev/all-sp/809385.m3u8", logo: "https://s21.q4cdn.com/819998841/files/doc_news/2024/May/Willow-logo-transparent-cb.png", quality: "1080p HD" },
             { name: "DD Sports 1 HD (Cricket)", cat: "SPORTS", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "1080p 60fps" },
             { name: "Aaj Tak HD", cat: "NEWS", url: "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Aaj_tak_logo.png/300px-Aaj_tak_logo.png", quality: "1080p HD" },
             { name: "9X Jalwa HD", cat: "MUSIC", url: "https://wiselp.wiseplayout.com/9X_Jalwa/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/9/90/9X_Jalwa_logo.jpg/220px-9X_Jalwa_logo.jpg", quality: "1080p HD" },
@@ -2351,7 +2352,8 @@
         const VERIFIED_SPORTS_EVENTS = [
             { title: "Willow Cricket HD (Live International Matches)", tour: "ICC & Global Cricket Series", url: "https://baila-lentoo.pages.dev/all-sp/809386.m3u8" },
             { title: "A Sports HD (Live Cricket Broadcast)", tour: "T20 Leagues & Bilateral Tours", url: "https://playztv-apps.pages.dev/a-sports/index.m3u8" },
-            { title: "Fancode Cricket Live Stream", tour: "International & Domestic Matches", url: "https://dai-fancode.pages.dev/mumbai/4249693_english_hls_aaca093f3b68270_1ta-di_h264/index.m3u8" },
+            { title: "PTV Sports HD (Live Cricket & International Series)", tour: "Global Cricket & Bilateral Series", url: "https://playztv-apps.pages.dev/ptv-sports/index.m3u8" },
+            { title: "Willow Cricket Live Alternative", tour: "Global Cricket Broadcast Feed", url: "https://baila-lentoo.pages.dev/all-sp/809385.m3u8" },
             { title: "DD Sports 1 HD (Live Cricket & National Sports)", tour: "Team India & Major Tournaments", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8" }
         ];
 
@@ -2449,7 +2451,7 @@
                 });
 
                 liveTvCatalogs.sort((a, b) => {
-                    const topTv = ['cnc_JIOTVPlusWW_tv', 'cnc_IPTV_tv'];
+                    const topTv = ['cnc_JIOTVPlusIND3_tv', 'cnc_JIOTVIND_tv', 'cnc_JioHotstar2_tv', 'cnc_SUNNXT_SKTechProvider_tv'];
                     const idxA = topTv.indexOf(a.id);
                     const idxB = topTv.indexOf(b.id);
                     if (idxA !== -1 && idxB !== -1) return idxA - idxB;
@@ -3085,7 +3087,20 @@
                 });
 
                 if (validStreams.length === 0) {
-                    container.innerHTML = '<div style="text-align: center; color: var(--text-sub); padding: 26px; font-size: 13px;">No playable streams active for this title right now.<br><span style="font-size:11px;opacity:0.8;">(Live match broadcasts go live shortly before start time)</span></div>';
+                    const isUpcoming = (title || '').includes('🔜');
+                    if (isUpcoming) {
+                        container.innerHTML = `
+                            <div style="text-align: center; color: var(--gold); padding: 30px 20px; font-size: 14px;">
+                                <div style="font-size: 32px; margin-bottom: 10px;">🔜 ⏳</div>
+                                <strong style="font-size: 16px; color: #fff;">Match Scheduled</strong><br>
+                                <span style="display:inline-block; margin-top:8px; color:var(--text-sub); font-size:13px; line-height:1.5;">
+                                    This fixture is upcoming. Live satellite & CDN feeds activate approximately <b>15 minutes</b> prior to toss / match start time.
+                                </span>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = '<div style="text-align: center; color: var(--text-sub); padding: 26px; font-size: 13px;">No playable streams active for this title right now.<br><span style="font-size:11px;opacity:0.8;">(Live match broadcasts go live shortly before start time)</span></div>';
+                    }
                     return;
                 }
 
@@ -3186,9 +3201,9 @@
             const webPlayable = isWebPlayable(url);
             if (!webPlayable) {
                 showPlayerOverlay('mkv', url, title);
+            } else {
+                playStreamUrl(url, video);
             }
-
-            playStreamUrl(url, video);
             document.getElementById('cinema-player-modal').classList.add('open');
         }
 
@@ -3209,7 +3224,7 @@
                             <button class="btn-overlay-act outline focusable" tabindex="0" onclick="copyToClipboard('${escapeHtml(url)}', 'Stream URL copied! Paste into VLC')">
                                 <i class="fas fa-copy"></i> Copy Stream URL
                             </button>
-                            <button class="btn-overlay-act outline focusable" tabindex="0" onclick="dismissPlayerOverlay()">
+                            <button class="btn-overlay-act outline focusable" tabindex="0" onclick="dismissPlayerOverlay(); const v = document.querySelector('#player-screen-wrap video'); if (v) playStreamUrl('${escapeHtml(url)}', v);">
                                 <i class="fas fa-play"></i> Try In Browser
                             </button>
                         </div>
