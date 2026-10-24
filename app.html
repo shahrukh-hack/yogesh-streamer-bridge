@@ -17,6 +17,7 @@
 
     <!-- Video Engine & FontAwesome Icons -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
@@ -2339,11 +2340,10 @@
 
         // 🌟 Verified 100% 24/7 Direct Working Live Indian TV Feeds
         const VERIFIED_LIVE_CHANNELS = [
-            { name: "Willow Cricket HD", cat: "SPORTS", url: "https://baila-lentoo.pages.dev/all-sp/809386.m3u8", logo: "https://s21.q4cdn.com/819998841/files/doc_news/2024/May/Willow-logo-transparent-cb.png", quality: "1080p 60fps" },
+            { name: "DD Sports 1 HD (Live Cricket)", cat: "SPORTS", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "1080p 60fps" },
             { name: "A Sports HD (Live Cricket)", cat: "SPORTS", url: "https://playztv-apps.pages.dev/a-sports/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "1080p HD" },
             { name: "PTV Sports HD (Live Cricket)", cat: "SPORTS", url: "https://playztv-apps.pages.dev/ptv-sports/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "720p HD" },
-            { name: "Willow Cricket Live Feed 2", cat: "SPORTS", url: "https://baila-lentoo.pages.dev/all-sp/809385.m3u8", logo: "https://s21.q4cdn.com/819998841/files/doc_news/2024/May/Willow-logo-transparent-cb.png", quality: "1080p HD" },
-            { name: "DD Sports 1 HD (Cricket)", cat: "SPORTS", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "1080p 60fps" },
+            { name: "Willow Cricket HD (VLC Recommended)", cat: "SPORTS", url: "https://baila-lentoo.pages.dev/all-sp/809386.m3u8", logo: "https://s21.q4cdn.com/819998841/files/doc_news/2024/May/Willow-logo-transparent-cb.png", quality: "1080p 60fps" },
             { name: "Aaj Tak HD", cat: "NEWS", url: "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Aaj_tak_logo.png/300px-Aaj_tak_logo.png", quality: "1080p HD" },
             { name: "9X Jalwa HD", cat: "MUSIC", url: "https://wiselp.wiseplayout.com/9X_Jalwa/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/9/90/9X_Jalwa_logo.jpg/220px-9X_Jalwa_logo.jpg", quality: "1080p HD" },
             { name: "DD National HD", cat: "ENTERTAINMENT", url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/7ff57cc9046b4c188b51a0d506f36e7f/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Doordarshan_Logo.svg/512px-Doordarshan_Logo.svg.png", quality: "1080p HD" },
@@ -2353,11 +2353,10 @@
 
         // 🌟 Verified Working Sports Feeds
         const VERIFIED_SPORTS_EVENTS = [
-            { title: "Willow Cricket HD (Live International Matches)", tour: "ICC & Global Cricket Series", url: "https://baila-lentoo.pages.dev/all-sp/809386.m3u8" },
+            { title: "DD Sports 1 HD (Live Cricket & National Sports)", tour: "Team India & Major Tournaments", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8" },
             { title: "A Sports HD (Live Cricket Broadcast)", tour: "T20 Leagues & Bilateral Tours", url: "https://playztv-apps.pages.dev/a-sports/index.m3u8" },
             { title: "PTV Sports HD (Live Cricket & International Series)", tour: "Global Cricket & Bilateral Series", url: "https://playztv-apps.pages.dev/ptv-sports/index.m3u8" },
-            { title: "Willow Cricket Live Alternative", tour: "Global Cricket Broadcast Feed", url: "https://baila-lentoo.pages.dev/all-sp/809385.m3u8" },
-            { title: "DD Sports 1 HD (Live Cricket & National Sports)", tour: "Team India & Major Tournaments", url: "https://mumbai-edge.smartplaytv.in/DDSportsHD/index.m3u8" }
+            { title: "Willow Cricket HD (Live International Matches)", tour: "ICC & Global Cricket Series", url: "https://baila-lentoo.pages.dev/all-sp/809386.m3u8" }
         ];
 
         // 📑 Tab Switching Engine
@@ -3283,23 +3282,77 @@
             if (overlay) overlay.style.display = 'none';
         }
 
-        function playStreamUrl(url, video) {
+        let currentShakaPlayer = null;
+
+        async function playStreamUrl(url, video) {
             let finalUrl = url;
+            currentPlayingUrl = finalUrl;
+
+            if (currentHlsEngine) {
+                currentHlsEngine.destroy();
+                currentHlsEngine = null;
+            }
+            if (currentShakaPlayer) {
+                try {
+                    await currentShakaPlayer.destroy();
+                } catch (e) {}
+                currentShakaPlayer = null;
+            }
+
+            const activeStream = (activeStreamList && activeStreamList[activeStreamIndex]) || null;
+            const activeClearkey = (activeStream && activeStream.clearkey) ? activeStream.clearkey : null;
+
+            // 🚀 Google Shaka Player Engine for MPEG-DASH & ClearKey Streams (PlayFy & SportzX)
+            const mpdMatch = finalUrl.match(/[?&]d=([^&]+)/);
+            const isDashClearkey = activeClearkey && (mpdMatch || finalUrl.includes('.mpd'));
+
+            if (isDashClearkey && window.shaka && shaka.Player && shaka.Player.isBrowserSupported()) {
+                try {
+                    shaka.polyfill.installAll();
+                    let directMpd = mpdMatch ? decodeURIComponent(mpdMatch[1]) : finalUrl;
+                    const parts = activeClearkey.split(':');
+
+                    currentShakaPlayer = new shaka.Player(video);
+                    if (parts.length === 2) {
+                        currentShakaPlayer.configure({
+                            drm: {
+                                clearKeys: {
+                                    [parts[0]]: parts[1]
+                                }
+                            },
+                            streaming: {
+                                bufferingGoal: 10,
+                                rebufferingGoal: 2
+                            }
+                        });
+                    }
+
+                    currentShakaPlayer.addEventListener('error', (e) => {
+                        console.warn('Shaka Player error:', e);
+                        if (activeStreamList.length > 1 && activeStreamIndex < activeStreamList.length - 1) {
+                            tryNextStreamServer();
+                        } else {
+                            showPlayerOverlay('error', url, activeStreamTitle);
+                        }
+                    });
+
+                    await currentShakaPlayer.load(directMpd);
+                    dismissPlayerOverlay();
+                    updateAudioTrackUI();
+                    video.play().catch(e => console.log('Autoplay:', e));
+                    return;
+                } catch (shakaErr) {
+                    console.warn('Shaka Player failed to load, falling back to Hls.js:', shakaErr);
+                }
+            }
+
             if (finalUrl.startsWith('http://') || finalUrl.includes('baila-lentoo.pages.dev')) {
                 if (!finalUrl.includes('/proxy/stream')) {
                     finalUrl = `${API_BASE}/proxy/stream?url=${encodeURIComponent(finalUrl)}`;
                 }
             }
-            currentPlayingUrl = finalUrl;
-            if (currentHlsEngine) {
-                currentHlsEngine.destroy();
-                currentHlsEngine = null;
-            }
 
             if (Hls.isSupported() && (finalUrl.includes('.m3u8') || finalUrl.includes('/proxy/stream') || finalUrl.includes('klnwm.com') || finalUrl.includes('hlscob.com') || finalUrl.includes('cdnvideo11.shop'))) {
-                const activeStream = (activeStreamList && activeStreamList[activeStreamIndex]) || null;
-                const activeClearkey = (activeStream && activeStream.clearkey) ? activeStream.clearkey : null;
-
                 const hlsConfig = {
                     enableWorker: true,
                     lowLatencyMode: true,
@@ -3408,6 +3461,19 @@
             const label = document.getElementById('player-audio-label');
             if (!btn || !label) return;
 
+            if (currentShakaPlayer) {
+                const tracks = currentShakaPlayer.getVariantTracks().filter(t => t.type === 'variant');
+                const langs = [...new Set(tracks.map(t => t.language).filter(Boolean))];
+                if (langs.length > 1) {
+                    const currentLang = currentShakaPlayer.getAudioLanguagesAndRoles()[0]?.language || langs[0];
+                    btn.style.display = 'inline-flex';
+                    label.innerText = `🎧 ${currentLang.toUpperCase()} (${langs.length})`;
+                } else {
+                    btn.style.display = 'none';
+                }
+                return;
+            }
+
             if (currentHlsEngine && currentHlsEngine.audioTracks && currentHlsEngine.audioTracks.length > 1) {
                 const tracks = currentHlsEngine.audioTracks;
                 const currentIdx = currentHlsEngine.audioTrack >= 0 ? currentHlsEngine.audioTrack : 0;
@@ -3421,6 +3487,19 @@
         }
 
         function switchAudioTrack() {
+            if (currentShakaPlayer) {
+                const tracks = currentShakaPlayer.getVariantTracks().filter(t => t.type === 'variant');
+                const langs = [...new Set(tracks.map(t => t.language).filter(Boolean))];
+                if (langs.length <= 1) return;
+                const currentLang = currentShakaPlayer.getAudioLanguagesAndRoles()[0]?.language || langs[0];
+                const nextIdx = (langs.indexOf(currentLang) + 1) % langs.length;
+                const nextLang = langs[nextIdx];
+                currentShakaPlayer.selectAudioLanguage(nextLang);
+                showToast(`🎧 Switched audio to: ${nextLang.toUpperCase()}`);
+                updateAudioTrackUI();
+                return;
+            }
+
             if (!currentHlsEngine || !currentHlsEngine.audioTracks || currentHlsEngine.audioTracks.length <= 1) return;
             const tracks = currentHlsEngine.audioTracks;
             const currentIdx = currentHlsEngine.audioTrack >= 0 ? currentHlsEngine.audioTrack : 0;
@@ -3432,10 +3511,16 @@
             updateAudioTrackUI();
         }
 
-        function closeCinemaPlayer() {
+        async function closeCinemaPlayer() {
             if (currentHlsEngine) {
                 currentHlsEngine.destroy();
                 currentHlsEngine = null;
+            }
+            if (currentShakaPlayer) {
+                try {
+                    await currentShakaPlayer.destroy();
+                } catch(e) {}
+                currentShakaPlayer = null;
             }
             const audioBtn = document.getElementById('player-audio-switch-btn');
             if (audioBtn) audioBtn.style.display = 'none';
