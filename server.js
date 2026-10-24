@@ -647,8 +647,23 @@ const server = http.createServer(async (req, res) => {
                         const extraParams = (parsedUrl.query.referer ? `&referer=${encodeURIComponent(parsedUrl.query.referer)}` : '') +
                                             (parsedUrl.query.ua ? `&ua=${encodeURIComponent(parsedUrl.query.ua)}` : '');
                         const rewritten = lines.map(line => {
-                            const trimmed = line.trim();
-                            if (!trimmed || trimmed.startsWith('#')) return line;
+                            let trimmed = line.trim();
+                            if (!trimmed) return line;
+
+                            // Rewrite URIs in HLS directives (#EXT-X-MEDIA, #EXT-X-KEY, #EXT-X-MAP, etc.)
+                            if (trimmed.startsWith('#')) {
+                                if (trimmed.includes('URI="')) {
+                                    return trimmed.replace(/URI="([^"]+)"/g, (match, u) => {
+                                        let fullUri = u;
+                                        if (!fullUri.startsWith('http://') && !fullUri.startsWith('https://')) {
+                                            fullUri = baseUrl + fullUri;
+                                        }
+                                        return `URI="/proxy/stream?url=${encodeURIComponent(fullUri)}${extraParams}"`;
+                                    });
+                                }
+                                return line;
+                            }
+
                             let fullChunk = trimmed;
                             if (!fullChunk.startsWith('http://') && !fullChunk.startsWith('https://')) {
                                 fullChunk = baseUrl + fullChunk;

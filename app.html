@@ -3165,15 +3165,14 @@
                             <div class="stream-detail-sub">${sub}</div>
                         </div>
                         <div class="stream-actions-group" onclick="event.stopPropagation()">
-                            ${!webPlayable ? `
-                                <button class="btn-stream-action btn-vlc focusable" tabindex="0" onclick="openInExternalPlayer('${escapeHtml(s.url)}')">
-                                    <i class="fas fa-play"></i> VLC / MX
-                                </button>
-                            ` : `
+                            ${webPlayable ? `
                                 <button class="btn-stream-action focusable" tabindex="0" style="background:var(--gold); color:#000;" onclick="closeStreamPicker(); launchCinemaPlayer('${escapeHtml(s.url)}', '${escapeHtml(title)}', validStreams, ${idx});">
                                     <i class="fas fa-play"></i> Play
                                 </button>
-                            `}
+                            ` : ''}
+                            <button class="btn-stream-action btn-vlc focusable" tabindex="0" onclick="openInExternalPlayer('${escapeHtml(s.url)}')">
+                                <i class="fas fa-play"></i> VLC / MX
+                            </button>
                             <button class="btn-stream-action focusable" tabindex="0" title="Copy Stream URL" onclick="copyToClipboard('${escapeHtml(s.url)}', 'Stream URL copied! Paste into VLC (Ctrl+N)')">
                                 <i class="fas fa-copy"></i>
                             </button>
@@ -3285,20 +3284,45 @@
         }
 
         function playStreamUrl(url, video) {
-            currentPlayingUrl = url;
+            let finalUrl = url;
+            if (finalUrl.startsWith('http://') || finalUrl.includes('baila-lentoo.pages.dev')) {
+                if (!finalUrl.includes('/proxy/stream')) {
+                    finalUrl = `${API_BASE}/proxy/stream?url=${encodeURIComponent(finalUrl)}`;
+                }
+            }
+            currentPlayingUrl = finalUrl;
             if (currentHlsEngine) {
                 currentHlsEngine.destroy();
                 currentHlsEngine = null;
             }
 
-            if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/stream') || url.includes('klnwm.com') || url.includes('hlscob.com') || url.includes('cdnvideo11.shop'))) {
-                currentHlsEngine = new Hls({
+            if (Hls.isSupported() && (finalUrl.includes('.m3u8') || finalUrl.includes('/proxy/stream') || finalUrl.includes('klnwm.com') || finalUrl.includes('hlscob.com') || finalUrl.includes('cdnvideo11.shop'))) {
+                const activeStream = (activeStreamList && activeStreamList[activeStreamIndex]) || null;
+                const activeClearkey = (activeStream && activeStream.clearkey) ? activeStream.clearkey : null;
+
+                const hlsConfig = {
                     enableWorker: true,
                     lowLatencyMode: true,
                     manifestLoadingTimeOut: 15000,
-                    levelLoadingTimeOut: 15000
-                });
-                currentHlsEngine.loadSource(url);
+                    levelLoadingTimeOut: 15000,
+                    emeEnabled: true
+                };
+
+                if (activeClearkey) {
+                    const parts = activeClearkey.split(':');
+                    if (parts.length === 2) {
+                        hlsConfig.drmSystems = {
+                            'org.w3.clearkey': {
+                                clearkeys: {
+                                    [parts[0]]: parts[1]
+                                }
+                            }
+                        };
+                    }
+                }
+
+                currentHlsEngine = new Hls(hlsConfig);
+                currentHlsEngine.loadSource(finalUrl);
                 currentHlsEngine.attachMedia(video);
                 currentHlsEngine.on(Hls.Events.MANIFEST_PARSED, function () {
                     dismissPlayerOverlay();
