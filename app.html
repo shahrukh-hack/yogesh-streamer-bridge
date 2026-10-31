@@ -2394,11 +2394,17 @@
             return raw
                 .replace(/\[Hindi[^\]]*\]/gi, '')
                 .replace(/\(Hindi[^\)]*\)/gi, '')
+                .replace(/\{Hindi[^\}]*\}/gi, '')
+                .replace(/\[Gujarati[^\]]*\]/gi, '')
+                .replace(/\(Gujarati[^\)]*\)/gi, '')
+                .replace(/\{Gujarati[^\}]*\}/gi, '')
                 .replace(/\[Telugu[^\]]*\]/gi, '')
                 .replace(/\[Tamil[^\]]*\]/gi, '')
                 .replace(/\[Dual[^\]]*\]/gi, '')
                 .replace(/\[Multi[^\]]*\]/gi, '')
-                .replace(/WEB-DL|DS4K|HDRip|HD-TS|ESubs?|Multi\s*Audio|Dual\s*Audio|Full\s*Movie|x264|x265|HEVC|AMZN|NF|DD\+?5\.1/gi, '')
+                .replace(/\[x264[^\]]*\]/gi, '')
+                .replace(/\[Exclusive[^\]]*\]/gi, '')
+                .replace(/WEB-DL|DS4K|HDRip|HD-TS|ESubs?|Multi\s*Audio|Dual\s*Audio|Full\s*Movie|x264|x265|HEVC|AMZN|NF|DD\+?5\.1|DD\+?2\.0|Gujarati/gi, '')
                 .replace(/\s*\|\s*480p.*$/gi, '')
                 .replace(/\s*\|\s*720p.*$/gi, '')
                 .replace(/\s*\|\s*1080p.*$/gi, '')
@@ -2407,6 +2413,7 @@
                 .replace(/720p.*$/gi, '')
                 .replace(/1080p.*$/gi, '')
                 .replace(/2160p.*$/gi, '')
+                .replace(/\s+4k\b/gi, '')
                 .replace(/\s{2,}/g, ' ')
                 .trim();
         }
@@ -2730,9 +2737,10 @@
         }
 
         // 🦁 Dynamic Gujarati Movies & Series Auto-Harvester
-        // Captures Gujarati movies & web series from ANY source dynamically as they are added
+        // Captures Gujarati movies & web series from ALL cloud sources dynamically as they are added
         let dynamicGujaratiMovies = [];
         const seenGujaratiMovieIds = new Set();
+        let gujaratiInitStarted = false;
 
         function harvestGujaratiMovies(metas, catType, catName) {
             if (!Array.isArray(metas) || catType === 'tv') return; // strictly movies and series
@@ -2755,11 +2763,14 @@
                               text.includes('3 ekka') ||
                               text.includes('tron ekka') ||
                               text.includes('shubh yatra') ||
-                              (text.includes('vash') && (text.includes('janki') || text.includes('hit') || text.includes('movie') || text.includes('horror'))) ||
+                              (text.includes('vash') && (text.includes('janki') || text.includes('hit') || text.includes('movie') || text.includes('horror') || text.includes('level 2'))) ||
                               text.includes('hellaro') ||
                               text.includes('bushirt t-shirt') ||
                               text.includes('kutch express') ||
-                              text.includes('chal man jeetva');
+                              text.includes('chal man jeetva') ||
+                              text.includes('chaal jeevi laiye') ||
+                              text.includes('jhamkudi') ||
+                              text.includes('sonu tane mara par bharoso');
 
                 if (isGuj) {
                     seenGujaratiMovieIds.add(m.id);
@@ -2777,6 +2788,56 @@
             }
         }
 
+        async function initGujaratiLibrary() {
+            if (gujaratiInitStarted) return;
+            gujaratiInitStarted = true;
+
+            // 1. Seed verified blockbusters with confirmed working streams
+            const seedBlockbusters = [
+                {
+                    id: 'tt13433802',
+                    name: 'Chhello Show (Last Film Show) (2022)',
+                    type: 'movie',
+                    poster: 'https://image.tmdb.org/t/p/w500/b1pWf2Y1l7g5zO4T6XzWfO0uTfF.jpg',
+                    sourceCat: 'Gujarati Blockbuster (45 Streams)'
+                },
+                {
+                    id: 'tt9074052',
+                    name: 'Sharato Lagu (2018)',
+                    type: 'movie',
+                    poster: 'https://m.media-amazon.com/images/M/MV5BNTBmNTQwMTUtMTI1Yi00NjA1LWIwMWEtYmQ3MGNmYTkwMTM3XkEyXkFqcGc@._V1_.jpg',
+                    sourceCat: 'Gujarati Cinema'
+                }
+            ];
+
+            seedBlockbusters.forEach(m => {
+                if (!seenGujaratiMovieIds.has(m.id)) {
+                    seenGujaratiMovieIds.add(m.id);
+                    dynamicGujaratiMovies.push(m);
+                }
+            });
+
+            // 2. Concurrently harvest all scraped Gujarati movies from upstream cloud scrapers
+            try {
+                const endpoints = [
+                    `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=gujarati.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=gujarati.json`
+                ];
+
+                await Promise.allSettled(endpoints.map(async url => {
+                    try {
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        if (data && Array.isArray(data.metas)) {
+                            harvestGujaratiMovies(data.metas, 'other', 'Gujarati Cloud Scraper');
+                        }
+                    } catch(e) {}
+                }));
+            } catch(e) {}
+
+            renderGujaratiTrackCards();
+        }
+
         function renderHomeGujaratiRow(container) {
             const sec = document.createElement('div');
             sec.className = 'catalog-row-section';
@@ -2785,7 +2846,7 @@
             sec.setAttribute('data-name', '🦁 Gujarati Movies & Web Series (ગુજરાતી ફિલ્મો અને સિરીઝ)');
             sec.innerHTML = `
                 <div class="section-headline">
-                    <div class="section-title-text"><i class="fas fa-film" style="color: #f59e0b;"></i> 🦁 Gujarati Movies &amp; Series <span class="badge-stream-format badge-stream-web">ગુજરાતી ફિલ્મો • Auto-Updated</span></div>
+                    <div class="section-title-text"><i class="fas fa-film" style="color: #f59e0b;"></i> 🦁 Gujarati Movies &amp; Series <span class="badge-stream-format badge-stream-web" id="badge-gujarati-count">ગુજરાતી ફિલ્મો • Auto-Updated</span></div>
                     <span class="see-all-btn focusable" tabindex="0" onclick="openGujaratiMoviesFullGrid()">
                         See All <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
                     </span>
@@ -2800,11 +2861,17 @@
             `;
             container.appendChild(sec);
             renderGujaratiTrackCards();
+            initGujaratiLibrary();
         }
 
         function renderGujaratiTrackCards() {
             const track = document.getElementById('track-home-gujarati-movies');
             if (!track) return;
+
+            const badgeCount = document.getElementById('badge-gujarati-count');
+            if (badgeCount && dynamicGujaratiMovies.length > 0) {
+                badgeCount.innerText = `ગુજરાતી ફિલ્મો • ${dynamicGujaratiMovies.length} Titles`;
+            }
 
             if (dynamicGujaratiMovies.length === 0) {
                 track.innerHTML = '<div style="color: var(--text-sub); padding: 22px; font-size: 13px;">Scanning all cloud sources for Gujarati movies &amp; series...</div>';
@@ -3118,7 +3185,7 @@
                 if (cat === 'ALL') {
                     sec.style.display = 'block';
                 } else if (cat === 'GUJARATI') {
-                    sec.style.display = (id === 'row-section-home-gujarati-movies') ? 'block' : 'none';
+                    sec.style.display = (id.includes('gujarat') || sec.id.includes('gujarat') || name.includes('gujarat')) ? 'block' : 'none';
                 } else if (cat === 'SPORTS') {
                     sec.style.display = (name.includes('sport') || name.includes('event') || name.includes('highlight') || name.includes('cricket') || id.includes('sport') || id.includes('event')) ? 'block' : 'none';
                 } else if (cat === 'BOLLYWOOD') {
@@ -3133,6 +3200,13 @@
                     sec.style.display = (name.includes('anime') || name.includes('anilight')) ? 'block' : 'none';
                 }
             });
+
+            if (cat === 'GUJARATI') {
+                const gujSec = document.getElementById('row-section-home-gujarati-movies');
+                if (gujSec) {
+                    gujSec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
         }
 
         // 🎬 Filtering for Movies Tab
