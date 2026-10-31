@@ -2404,7 +2404,11 @@
                 .replace(/\[Multi[^\]]*\]/gi, '')
                 .replace(/\[x264[^\]]*\]/gi, '')
                 .replace(/\[Exclusive[^\]]*\]/gi, '')
-                .replace(/WEB-DL|DS4K|HDRip|HD-TS|ESubs?|Multi\s*Audio|Dual\s*Audio|Full\s*Movie|x264|x265|HEVC|AMZN|NF|DD\+?5\.1|DD\+?2\.0|Gujarati/gi, '')
+                .replace(/\[ALL Episodes\]/gi, '')
+                .replace(/\|\s*OHO Series/gi, '')
+                .replace(/Complete\s+Gujarati\s+WEB\s+Series/gi, '')
+                .replace(/Complete\s+Web\s+Series/gi, '')
+                .replace(/WEB-DL|DS4K|HDRip|HD-TS|ESubs?|Multi\s*Audio|Dual\s*Audio|Full\s*Movie|Full\s*Series|x264|x265|HEVC|AMZN|NF|DD\+?5\.1|DD\+?2\.0|Gujarati/gi, '')
                 .replace(/\s*\|\s*480p.*$/gi, '')
                 .replace(/\s*\|\s*720p.*$/gi, '')
                 .replace(/\s*\|\s*1080p.*$/gi, '')
@@ -2736,11 +2740,30 @@
             });
         }
 
-        // 🦁 Dynamic Gujarati Movies & Series Auto-Harvester
+        // 🦁 Dynamic Gujarati Movies, Web Series, ShemarooMe, JOJO & OHO Auto-Harvester
         // Captures Gujarati movies & web series from ALL cloud sources dynamically as they are added
         let dynamicGujaratiMovies = [];
         const seenGujaratiMovieIds = new Set();
         let gujaratiInitStarted = false;
+        let gujaratiCurrentModalFilter = 'ALL';
+
+        function getGujaratiBadge(name) {
+            const low = (name || '').toLowerCase();
+            const isSeries = low.includes('season') || low.includes('series') || low.includes('episode');
+            if (isSeries) {
+                return '<div class="badge-card-quality" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color:#fff; font-weight:800;">📺 SERIES</div>';
+            }
+            if (low.includes('shemaroo')) {
+                return '<div class="badge-card-quality" style="background: linear-gradient(135deg, #9333ea, #7e22ce); color:#fff; font-weight:800;">🎭 SHEMAROO</div>';
+            }
+            if (low.includes('jojo')) {
+                return '<div class="badge-card-quality" style="background: linear-gradient(135deg, #ec4899, #be185d); color:#fff; font-weight:800;">✨ JOJO OTT</div>';
+            }
+            if (low.includes('oho')) {
+                return '<div class="badge-card-quality" style="background: linear-gradient(135deg, #10b981, #047857); color:#fff; font-weight:800;">🌟 OHO</div>';
+            }
+            return '<div class="badge-card-quality" style="background: linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-weight:800;">🦁 GUJARATI</div>';
+        }
 
         function harvestGujaratiMovies(metas, catType, catName) {
             if (!Array.isArray(metas) || catType === 'tv') return; // strictly movies and series
@@ -2753,23 +2776,43 @@
                               text.includes('gujrati') || 
                               text.includes('gujarati-') || 
                               text.includes('[gujarati') || 
-                              text.includes('(gujarati') ||
-                              text.includes('{gujarati') ||
-                              text.includes('bicharo bachelor') ||
-                              text.includes('kasoombo') ||
-                              text.includes('chhello show') ||
-                              text.includes('last film show') ||
-                              text.includes('fakt mahilao') ||
-                              text.includes('3 ekka') ||
-                              text.includes('tron ekka') ||
-                              text.includes('shubh yatra') ||
-                              (text.includes('vash') && (text.includes('janki') || text.includes('hit') || text.includes('movie') || text.includes('horror') || text.includes('level 2'))) ||
-                              text.includes('hellaro') ||
-                              text.includes('bushirt t-shirt') ||
-                              text.includes('kutch express') ||
-                              text.includes('chal man jeetva') ||
-                              text.includes('chaal jeevi laiye') ||
-                              text.includes('jhamkudi') ||
+                              text.includes('(gujarati') || 
+                              text.includes('{gujarati') || 
+                              text.includes('oho') || 
+                              text.includes('shemaroo') || 
+                              text.includes('shemaroome') || 
+                              text.includes('jojo') || 
+                              text.includes('vitthal') || 
+                              text.includes('warso') || 
+                              text.includes('fafda') || 
+                              text.includes('matsyavedh') || 
+                              text.includes('taari maari') || 
+                              text.includes('kajodu') || 
+                              text.includes('kunwari') || 
+                              text.includes('dil padosi') || 
+                              text.includes('beinteha') || 
+                              text.includes('natak') || 
+                              text.includes('bicharo bachelor') || 
+                              text.includes('kasoombo') || 
+                              text.includes('chhello show') || 
+                              text.includes('last film show') || 
+                              text.includes('fakt mahilao') || 
+                              text.includes('3 ekka') || 
+                              text.includes('tron ekka') || 
+                              text.includes('shubh yatra') || 
+                              text.includes('naadi dosh') || 
+                              text.includes('dear father') || 
+                              text.includes('vickida') || 
+                              text.includes('jaysuk') || 
+                              text.includes('raado') || 
+                              text.includes('bachubhai') || 
+                              (text.includes('vash') && (text.includes('janki') || text.includes('hit') || text.includes('movie') || text.includes('horror') || text.includes('level 2'))) || 
+                              text.includes('hellaro') || 
+                              text.includes('bushirt t-shirt') || 
+                              text.includes('kutch express') || 
+                              text.includes('chal man jeetva') || 
+                              text.includes('chaal jeevi laiye') || 
+                              text.includes('jhamkudi') || 
                               text.includes('sonu tane mara par bharoso');
 
                 if (isGuj) {
@@ -2817,11 +2860,28 @@
                 }
             });
 
-            // 2. Concurrently harvest all scraped Gujarati movies from upstream cloud scrapers
+            // 2. Concurrently harvest all Gujarati movies, web series, ShemarooMe & JOJO originals from upstream cloud scrapers
             try {
                 const endpoints = [
                     `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=gujarati.json`,
-                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=gujarati.json`
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=gujarati.json`,
+                    `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=gujarati%20series.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=gujarati%20series.json`,
+                    `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=gujarati%20season.json`,
+                    `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=vitthal.json`,
+                    `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=oho.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=shemaroo.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=shemaroome.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=jojo.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=natak.json`,
+                    `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=gujarati%202025.json`,
+                    `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=gujarati%202024.json`,
+                    `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=gujarati%202023.json`,
+                    `${API_BASE}/catalog/other/cnc_HDHub4U_other/search=gujarati%202022.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=gujarati%202025.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=gujarati%202024.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=gujarati%202023.json`,
+                    `${API_BASE}/catalog/other/cnc_Rogmovies_other/search=gujarati%202022.json`
                 ];
 
                 await Promise.allSettled(endpoints.map(async url => {
@@ -2870,7 +2930,11 @@
 
             const badgeCount = document.getElementById('badge-gujarati-count');
             if (badgeCount && dynamicGujaratiMovies.length > 0) {
-                badgeCount.innerText = `ગુજરાતી ફિલ્મો • ${dynamicGujaratiMovies.length} Titles`;
+                const seriesCount = dynamicGujaratiMovies.filter(m => {
+                    const l = (m.name || '').toLowerCase();
+                    return l.includes('season') || l.includes('series') || l.includes('episode');
+                }).length;
+                badgeCount.innerText = `ગુજરાતી • ${dynamicGujaratiMovies.length} Titles (${seriesCount} Series)`;
             }
 
             if (dynamicGujaratiMovies.length === 0) {
@@ -2884,10 +2948,11 @@
                 card.className = 'media-poster-card focusable';
                 card.tabIndex = 0;
                 const displayTitle = cleanTitle(item.name);
+                const badgeHtml = getGujaratiBadge(item.name);
                 card.innerHTML = `
                     <div class="poster-frame">
                         <img src="${item.poster || 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg'}" alt="${displayTitle}" loading="lazy" onerror="this.src='https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg'">
-                        <div class="badge-card-quality" style="background: linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-weight:800;">🦁 GUJARATI</div>
+                        ${badgeHtml}
                     </div>
                     <div class="poster-title" title="${item.name}">${displayTitle}</div>
                 `;
@@ -2896,28 +2961,43 @@
             });
         }
 
-        function openGujaratiMoviesFullGrid() {
-            const modal = document.getElementById('catalog-fullview-modal');
-            const titleEl = document.getElementById('fullgrid-catalog-title');
-            const badgeEl = document.getElementById('fullgrid-count-badge');
-            const wrap = document.getElementById('fullgrid-items-wrap');
+        function filterGujaratiGridByTag(filterTag) {
+            gujaratiCurrentModalFilter = filterTag;
+            renderGujaratiFullGridItems();
+        }
 
-            if (window.location.hash !== '#catalog-grid') {
-                history.pushState({ modal: 'catalog-grid' }, '', '#catalog-grid');
+        function renderGujaratiFullGridItems() {
+            const wrap = document.getElementById('fullgrid-items-wrap');
+            if (!wrap) return;
+
+            let filtered = dynamicGujaratiMovies;
+            if (gujaratiCurrentModalFilter === 'SERIES') {
+                filtered = dynamicGujaratiMovies.filter(m => {
+                    const l = (m.name || '').toLowerCase();
+                    return l.includes('season') || l.includes('series') || l.includes('episode');
+                });
+            } else if (gujaratiCurrentModalFilter === 'MOVIES') {
+                filtered = dynamicGujaratiMovies.filter(m => {
+                    const l = (m.name || '').toLowerCase();
+                    return !l.includes('season') && !l.includes('series') && !l.includes('episode');
+                });
+            } else if (gujaratiCurrentModalFilter === 'OTT') {
+                filtered = dynamicGujaratiMovies.filter(m => {
+                    const l = (m.name || '').toLowerCase();
+                    return l.includes('shemaroo') || l.includes('jojo') || l.includes('oho');
+                });
             }
 
-            titleEl.innerText = '🦁 All Gujarati Movies & Web Series (બધી ગુજરાતી ફિલ્મો)';
-            badgeEl.innerText = `${dynamicGujaratiMovies.length} Titles`;
-            modal.classList.add('open');
-            modal.scrollTo({ top: 0 });
+            const badgeEl = document.getElementById('fullgrid-count-badge');
+            if (badgeEl) badgeEl.innerText = `${filtered.length} Titles`;
 
-            if (dynamicGujaratiMovies.length === 0) {
-                wrap.innerHTML = '<div style="color: var(--text-sub); grid-column: 1 / -1; text-align: center; padding: 40px; font-size: 13px;">Scanning all sources for Gujarati movies &amp; series...</div>';
+            if (filtered.length === 0) {
+                wrap.innerHTML = '<div style="color: var(--text-sub); grid-column: 1 / -1; text-align: center; padding: 40px; font-size: 13px;">No titles found in this category.</div>';
                 return;
             }
 
             wrap.innerHTML = '';
-            dynamicGujaratiMovies.forEach(item => {
+            filtered.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'media-poster-card focusable';
                 card.tabIndex = 0;
@@ -2926,16 +3006,48 @@
                 card.style.maxWidth = '100%';
 
                 const displayTitle = cleanTitle(item.name);
+                const badgeHtml = getGujaratiBadge(item.name);
                 card.innerHTML = `
                     <div class="poster-frame">
                         <img src="${item.poster || 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg'}" alt="${displayTitle}" loading="lazy" onerror="this.src='https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg'">
-                        <div class="badge-card-quality" style="background: linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-weight:800;">🦁 GUJARATI</div>
+                        ${badgeHtml}
                     </div>
                     <div class="poster-title" title="${item.name}">${displayTitle}</div>
                 `;
                 card.onclick = () => openStreamPicker(item.type || 'movie', item.id, item.name);
                 wrap.appendChild(card);
             });
+        }
+
+        function openGujaratiMoviesFullGrid(initialFilter = 'ALL') {
+            const modal = document.getElementById('catalog-fullview-modal');
+            const titleEl = document.getElementById('fullgrid-catalog-title');
+            const badgeEl = document.getElementById('fullgrid-count-badge');
+
+            if (window.location.hash !== '#catalog-grid') {
+                history.pushState({ modal: 'catalog-grid' }, '', '#catalog-grid');
+            }
+
+            const seriesCount = dynamicGujaratiMovies.filter(m => {
+                const l = (m.name || '').toLowerCase();
+                return l.includes('season') || l.includes('series') || l.includes('episode');
+            }).length;
+
+            titleEl.innerHTML = `
+                🦁 Gujarati Movies &amp; Web Series (ગુજરાતી ફિલ્મો અને સિરીઝ)
+                <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                    <button class="chip-btn focusable active" onclick="document.querySelectorAll('#catalog-fullview-modal .chip-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); filterGujaratiGridByTag('ALL');" style="padding:4px 12px; font-size:11px;">All (${dynamicGujaratiMovies.length})</button>
+                    <button class="chip-btn focusable" onclick="document.querySelectorAll('#catalog-fullview-modal .chip-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); filterGujaratiGridByTag('SERIES');" style="padding:4px 12px; font-size:11px; border-color:#3b82f6; color:#60a5fa;">📺 Web Series (${seriesCount})</button>
+                    <button class="chip-btn focusable" onclick="document.querySelectorAll('#catalog-fullview-modal .chip-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); filterGujaratiGridByTag('MOVIES');" style="padding:4px 12px; font-size:11px; border-color:#f59e0b; color:#f59e0b;">🍿 Movies (${dynamicGujaratiMovies.length - seriesCount})</button>
+                    <button class="chip-btn focusable" onclick="document.querySelectorAll('#catalog-fullview-modal .chip-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); filterGujaratiGridByTag('OTT');" style="padding:4px 12px; font-size:11px; border-color:#ec4899; color:#f472b6;">🎭 Shemaroo • JOJO • OHO</button>
+                </div>
+            `;
+            badgeEl.innerText = `${dynamicGujaratiMovies.length} Titles`;
+            modal.classList.add('open');
+            modal.scrollTo({ top: 0 });
+
+            gujaratiCurrentModalFilter = initialFilter;
+            renderGujaratiFullGridItems();
         }
 
         function buildCatalogRowElement(cat, parentContainer, tabPrefix, loadImmediate, rankOffset) {
