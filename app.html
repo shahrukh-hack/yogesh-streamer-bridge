@@ -2010,15 +2010,14 @@
         <!-- Quick Filters -->
         <div class="chips-bar" id="home-chips">
             <div class="chip-btn active focusable" tabindex="0" onclick="filterHomeCatalog('ALL', this)">All Catalogs</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('SPORTS', this)">🏏 Live Sports & Cricket</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('BOLLYWOOD', this)">🇮🇳 Bollywood & Regional</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('GUJARATI', this)" style="border-color: #f59e0b; color: #f59e0b;">🦁 Gujarati Movies &amp; Series</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('SPORTS', this)">🏏 Live Sports &amp; Cricket</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('BOLLYWOOD', this)">🇮🇳 Bollywood &amp; Regional</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('HOLLYWOOD', this)">🍿 Hollywood Dual-Audio</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('OTT', this)">✨ All OTT Hits (Netflix • Prime • Hotstar)</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('SERIES', this)">📺 Complete Web Series</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('ANIME', this)">⚔️ Anime & K-Drama</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('ANIME', this)">⚔️ Anime &amp; K-Drama</div>
         </div>
-
-        <!-- All 42 Dynamic Cloud Catalogs for Home -->
         <div id="home-catalogs-grid">
             <div class="spinner-gold"><i class="fas fa-spinner fa-spin"></i></div>
         </div>
@@ -2028,6 +2027,7 @@
     <div id="tab-movies" class="tab-view">
         <div class="chips-bar" id="movies-chips">
             <div class="chip-btn active focusable" tabindex="0" onclick="filterMoviesCategory('ALL', this)">All Movies</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('GUJARATI', this)" style="border-color: #f59e0b; color: #f59e0b;">🦁 Gujarati Movies</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('4K', this)">💎 True 4K UHD</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('BOLLY', this)">🇮🇳 Bollywood Blockbusters</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterMoviesCategory('SOUTH', this)">🔥 South Hindi Dubbed</div>
@@ -2042,11 +2042,12 @@
     <div id="tab-series" class="tab-view">
         <div class="chips-bar" id="series-chips">
             <div class="chip-btn active focusable" tabindex="0" onclick="filterSeriesCategory('ALL', this)">All Series</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('GUJARATI', this)" style="border-color: #f59e0b; color: #f59e0b;">🦁 Gujarati Web Series</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('OTT', this)">✨ All OTT Shows (Netflix • Prime • Hotstar)</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('ROG', this)">🔥 Rogmovies OTT Hub</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('HDHUB', this)">🎬 HDHub4U Series</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('CASTLE', this)">🏰 Castle Instant Web Play</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('KDRAMA', this)">🌸 K-Dramas & Asian Drama</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('KDRAMA', this)">🌸 K-Dramas &amp; Asian Drama</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('ANIME', this)">⚔️ Anime Series (Multi-Audio)</div>
         </div>
         <div id="series-catalogs-grid">
@@ -2565,9 +2566,10 @@
                     return 0;
                 });
 
-                // 1. Home Tab: Verified Live Sports & Live TV first, then all catalogs dynamically
+                // 1. Home Tab: Verified Live Sports, Live TV & Gujarati Movies Row
                 renderHomeVerifiedSportsRow(homeGrid);
                 renderHomeVerifiedLiveTVRow(homeGrid);
+                renderHomeGujaratiRow(homeGrid);
 
                 const homeAddedIds = new Set();
                 let homeRank = 2;
@@ -2641,6 +2643,12 @@
                         buildCatalogRowElement(cat, sportsGrid, 'sports', idx < 2, idx);
                     });
                 }
+
+                // Pre-scan top movie and series catalogs in background to harvest Gujarati titles immediately
+                setTimeout(() => {
+                    const topScanners = movieCatalogs.concat(seriesCatalogs).slice(0, 10);
+                    topScanners.forEach(cat => fetchCatalogTrack(cat, false));
+                }, 300);
             } catch (err) {
                 console.error('Bootstrap failed:', err);
                 homeGrid.innerHTML = '<div style="color: var(--text-sub); padding: 24px;">Failed to reach cloud resolver.</div>';
@@ -2721,6 +2729,148 @@
             });
         }
 
+        // 🦁 Dynamic Gujarati Movies & Series Auto-Harvester
+        // Captures Gujarati movies & web series from ANY source dynamically as they are added
+        let dynamicGujaratiMovies = [];
+        const seenGujaratiMovieIds = new Set();
+
+        function harvestGujaratiMovies(metas, catType, catName) {
+            if (!Array.isArray(metas) || catType === 'tv') return; // strictly movies and series
+            let newlyFound = false;
+
+            metas.forEach(m => {
+                if (!m || !m.name || seenGujaratiMovieIds.has(m.id)) return;
+                const text = `${m.name} ${m.description || ''} ${m.genre || ''}`.toLowerCase();
+                const isGuj = text.includes('gujarat') || 
+                              text.includes('gujrati') || 
+                              text.includes('gujarati-') || 
+                              text.includes('[gujarati') || 
+                              text.includes('(gujarati') ||
+                              text.includes('{gujarati') ||
+                              text.includes('bicharo bachelor') ||
+                              text.includes('kasoombo') ||
+                              text.includes('chhello show') ||
+                              text.includes('last film show') ||
+                              text.includes('fakt mahilao') ||
+                              text.includes('3 ekka') ||
+                              text.includes('tron ekka') ||
+                              text.includes('shubh yatra') ||
+                              (text.includes('vash') && (text.includes('janki') || text.includes('hit') || text.includes('movie') || text.includes('horror'))) ||
+                              text.includes('hellaro') ||
+                              text.includes('bushirt t-shirt') ||
+                              text.includes('kutch express') ||
+                              text.includes('chal man jeetva');
+
+                if (isGuj) {
+                    seenGujaratiMovieIds.add(m.id);
+                    if (!m.type) m.type = catType || 'movie';
+                    dynamicGujaratiMovies.push({
+                        ...m,
+                        sourceCat: catName || 'Movie & Series Source'
+                    });
+                    newlyFound = true;
+                }
+            });
+
+            if (newlyFound) {
+                renderGujaratiTrackCards();
+            }
+        }
+
+        function renderHomeGujaratiRow(container) {
+            const sec = document.createElement('div');
+            sec.className = 'catalog-row-section';
+            sec.id = 'row-section-home-gujarati-movies';
+            sec.setAttribute('data-id', 'gujarati-movies-series');
+            sec.setAttribute('data-name', '🦁 Gujarati Movies & Web Series (ગુજરાતી ફિલ્મો અને સિરીઝ)');
+            sec.innerHTML = `
+                <div class="section-headline">
+                    <div class="section-title-text"><i class="fas fa-film" style="color: #f59e0b;"></i> 🦁 Gujarati Movies &amp; Series <span class="badge-stream-format badge-stream-web">ગુજરાતી ફિલ્મો • Auto-Updated</span></div>
+                    <span class="see-all-btn focusable" tabindex="0" onclick="openGujaratiMoviesFullGrid()">
+                        See All <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
+                    </span>
+                </div>
+                <div class="carousel-container">
+                    <button class="carousel-arrow left focusable" tabindex="0" onclick="scrollTrack('track-home-gujarati-movies', -480)"><i class="fas fa-chevron-left"></i></button>
+                    <div class="carousel-track" id="track-home-gujarati-movies">
+                        <div class="spinner-gold"><i class="fas fa-spinner fa-spin"></i></div>
+                    </div>
+                    <button class="carousel-arrow right focusable" tabindex="0" onclick="scrollTrack('track-home-gujarati-movies', 480)"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            `;
+            container.appendChild(sec);
+            renderGujaratiTrackCards();
+        }
+
+        function renderGujaratiTrackCards() {
+            const track = document.getElementById('track-home-gujarati-movies');
+            if (!track) return;
+
+            if (dynamicGujaratiMovies.length === 0) {
+                track.innerHTML = '<div style="color: var(--text-sub); padding: 22px; font-size: 13px;">Scanning all cloud sources for Gujarati movies &amp; series...</div>';
+                return;
+            }
+
+            track.innerHTML = '';
+            dynamicGujaratiMovies.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'media-poster-card focusable';
+                card.tabIndex = 0;
+                const displayTitle = cleanTitle(item.name);
+                card.innerHTML = `
+                    <div class="poster-frame">
+                        <img src="${item.poster || 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg'}" alt="${displayTitle}" loading="lazy" onerror="this.src='https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg'">
+                        <div class="badge-card-quality" style="background: linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-weight:800;">🦁 GUJARATI</div>
+                    </div>
+                    <div class="poster-title" title="${item.name}">${displayTitle}</div>
+                `;
+                card.onclick = () => openStreamPicker(item.type || 'movie', item.id, item.name);
+                track.appendChild(card);
+            });
+        }
+
+        function openGujaratiMoviesFullGrid() {
+            const modal = document.getElementById('catalog-fullview-modal');
+            const titleEl = document.getElementById('fullgrid-catalog-title');
+            const badgeEl = document.getElementById('fullgrid-count-badge');
+            const wrap = document.getElementById('fullgrid-items-wrap');
+
+            if (window.location.hash !== '#catalog-grid') {
+                history.pushState({ modal: 'catalog-grid' }, '', '#catalog-grid');
+            }
+
+            titleEl.innerText = '🦁 All Gujarati Movies & Web Series (બધી ગુજરાતી ફિલ્મો)';
+            badgeEl.innerText = `${dynamicGujaratiMovies.length} Titles`;
+            modal.classList.add('open');
+            modal.scrollTo({ top: 0 });
+
+            if (dynamicGujaratiMovies.length === 0) {
+                wrap.innerHTML = '<div style="color: var(--text-sub); grid-column: 1 / -1; text-align: center; padding: 40px; font-size: 13px;">Scanning all sources for Gujarati movies &amp; series...</div>';
+                return;
+            }
+
+            wrap.innerHTML = '';
+            dynamicGujaratiMovies.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'media-poster-card focusable';
+                card.tabIndex = 0;
+                card.style.flex = 'unset';
+                card.style.width = '100%';
+                card.style.maxWidth = '100%';
+
+                const displayTitle = cleanTitle(item.name);
+                card.innerHTML = `
+                    <div class="poster-frame">
+                        <img src="${item.poster || 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg'}" alt="${displayTitle}" loading="lazy" onerror="this.src='https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg'">
+                        <div class="badge-card-quality" style="background: linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-weight:800;">🦁 GUJARATI</div>
+                    </div>
+                    <div class="poster-title" title="${item.name}">${displayTitle}</div>
+                `;
+                card.onclick = () => openStreamPicker(item.type || 'movie', item.id, item.name);
+                wrap.appendChild(card);
+            });
+        }
+
         function buildCatalogRowElement(cat, parentContainer, tabPrefix, loadImmediate, rankOffset) {
             const sec = document.createElement('div');
             sec.className = 'catalog-row-section';
@@ -2788,6 +2938,9 @@
                     metas = Array.isArray(data?.metas) ? data.metas : [];
                     metas = metas.filter(m => m && m.name && m.name.trim() !== '' && m.name.trim() !== '⠀');
                     catalogItemCache[cat.id] = metas;
+
+                    // Automatically harvest any Gujarati movies and web series from this catalog
+                    harvestGujaratiMovies(metas, cat.type, cat.name);
 
                     // Add to universal search index
                     metas.forEach(m => {
@@ -2964,6 +3117,8 @@
 
                 if (cat === 'ALL') {
                     sec.style.display = 'block';
+                } else if (cat === 'GUJARATI') {
+                    sec.style.display = (id === 'row-section-home-gujarati-movies') ? 'block' : 'none';
                 } else if (cat === 'SPORTS') {
                     sec.style.display = (name.includes('sport') || name.includes('event') || name.includes('highlight') || name.includes('cricket') || id.includes('sport') || id.includes('event')) ? 'block' : 'none';
                 } else if (cat === 'BOLLYWOOD') {
@@ -2984,6 +3139,11 @@
         function filterMoviesCategory(cat, el) {
             document.querySelectorAll('#movies-chips .chip-btn').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
+
+            if (cat === 'GUJARATI') {
+                openGujaratiMoviesFullGrid();
+                return;
+            }
 
             const sections = document.querySelectorAll('#movies-catalogs-grid .catalog-row-section');
             sections.forEach(sec => {
@@ -3008,6 +3168,11 @@
         function filterSeriesCategory(cat, el) {
             document.querySelectorAll('#series-chips .chip-btn').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
+
+            if (cat === 'GUJARATI') {
+                openGujaratiMoviesFullGrid();
+                return;
+            }
 
             const sections = document.querySelectorAll('#series-catalogs-grid .catalog-row-section');
             sections.forEach(sec => {
