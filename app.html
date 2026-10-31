@@ -2013,7 +2013,7 @@
             <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('SPORTS', this)">🏏 Live Sports & Cricket</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('BOLLYWOOD', this)">🇮🇳 Bollywood & Regional</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('HOLLYWOOD', this)">🍿 Hollywood Dual-Audio</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('OTT', this)">✨ Netflix / Prime / Disney</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('OTT', this)">✨ All OTT Hits (Netflix • Prime • Hotstar)</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('SERIES', this)">📺 Complete Web Series</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterHomeCatalog('ANIME', this)">⚔️ Anime & K-Drama</div>
         </div>
@@ -2042,9 +2042,10 @@
     <div id="tab-series" class="tab-view">
         <div class="chips-bar" id="series-chips">
             <div class="chip-btn active focusable" tabindex="0" onclick="filterSeriesCategory('ALL', this)">All Series</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('NETFLIX', this)">🔴 Netflix Originals</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('PRIME', this)">🔵 Amazon Prime Hits</div>
-            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('HOTSTAR', this)">⭐ Disney+ Hotstar</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('OTT', this)">✨ All OTT Shows (Netflix • Prime • Hotstar)</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('ROG', this)">🔥 Rogmovies OTT Hub</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('HDHUB', this)">🎬 HDHub4U Series</div>
+            <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('CASTLE', this)">🏰 Castle Instant Web Play</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('KDRAMA', this)">🌸 K-Dramas & Asian Drama</div>
             <div class="chip-btn focusable" tabindex="0" onclick="filterSeriesCategory('ANIME', this)">⚔️ Anime Series (Multi-Audio)</div>
         </div>
@@ -2494,6 +2495,7 @@
                 ]);
 
                 allBridgeCatalogs.forEach(cat => {
+                    if (deadScraperIds.has(cat.id)) return; // Skip dead/abandoned NetMirror scrapers completely
                     const lower = (cat.name + ' ' + cat.id).toLowerCase();
                     const isSports = lower.includes('sport') || lower.includes('event') || lower.includes('highlight') || lower.includes('cricket');
 
@@ -2563,30 +2565,57 @@
                     return 0;
                 });
 
-                // 1. Home Tab: Verified Live Sports & Live TV first, then Instant Web Movies & Series
+                // 1. Home Tab: Verified Live Sports & Live TV first, then all catalogs dynamically
                 renderHomeVerifiedSportsRow(homeGrid);
                 renderHomeVerifiedLiveTVRow(homeGrid);
 
+                const homeAddedIds = new Set();
                 let homeRank = 2;
-                // Castle Cinema (100% Instant Web Play Movies)
-                movieCatalogs.slice(0, 1).forEach(cat => {
+
+                // Priority 1: Instant Web Play Cinema (Castle Cinema)
+                movieCatalogs.filter(c => c.id === 'cnc_CastleTVUseVLC_other').forEach(cat => {
+                    homeAddedIds.add(cat.id);
                     buildCatalogRowElement(cat, homeGrid, 'home', true, homeRank++);
                 });
-                // Castle Cinema & Rogmovies (100% Instant Web Play Web Series & TV Shows)
-                seriesCatalogs.slice(0, 1).forEach(cat => {
-                    buildCatalogRowElement(cat, homeGrid, 'home', true, homeRank++);
+
+                // Priority 2: Top Web Series (Rogmovies & HDHub4U)
+                seriesCatalogs.filter(c => c.id === 'cnc_Rogmovies_other' || c.id === 'cnc_HDHub4U_other').forEach(cat => {
+                    if (!homeAddedIds.has(cat.id)) {
+                        homeAddedIds.add(cat.id);
+                        buildCatalogRowElement(cat, homeGrid, 'home', true, homeRank++);
+                    }
                 });
-                // Cloud sports events
-                sportsCatalogs.slice(0, 2).forEach(cat => {
-                    buildCatalogRowElement(cat, homeGrid, 'home', true, homeRank++);
+
+                // Priority 3: Live Sports & Cricket Events
+                sportsCatalogs.forEach(cat => {
+                    if (!homeAddedIds.has(cat.id)) {
+                        homeAddedIds.add(cat.id);
+                        buildCatalogRowElement(cat, homeGrid, 'home', homeRank <= 6, homeRank++);
+                    }
                 });
-                // Remaining movie catalogs
-                movieCatalogs.slice(1, 14).forEach(cat => {
-                    buildCatalogRowElement(cat, homeGrid, 'home', false, homeRank++);
+
+                // Priority 4: All Movie Catalogs (Full Collection)
+                movieCatalogs.forEach(cat => {
+                    if (!homeAddedIds.has(cat.id)) {
+                        homeAddedIds.add(cat.id);
+                        buildCatalogRowElement(cat, homeGrid, 'home', false, homeRank++);
+                    }
                 });
-                // Remaining series catalogs
-                seriesCatalogs.slice(1, 8).forEach(cat => {
-                    buildCatalogRowElement(cat, homeGrid, 'home', false, homeRank++);
+
+                // Priority 5: All Series Catalogs (Full Collection)
+                seriesCatalogs.forEach(cat => {
+                    if (!homeAddedIds.has(cat.id)) {
+                        homeAddedIds.add(cat.id);
+                        buildCatalogRowElement(cat, homeGrid, 'home', false, homeRank++);
+                    }
+                });
+
+                // Priority 6: All Live TV Catalogs (Full Collection)
+                liveTvCatalogs.forEach(cat => {
+                    if (!homeAddedIds.has(cat.id)) {
+                        homeAddedIds.add(cat.id);
+                        buildCatalogRowElement(cat, homeGrid, 'home', false, homeRank++);
+                    }
                 });
 
                 // 2. Movies Tab
@@ -2942,7 +2971,7 @@
                 } else if (cat === 'HOLLYWOOD') {
                     sec.style.display = (name.includes('vegamovies') || name.includes('marvel') || name.includes('4khdhub') || name.includes('star wars') || name.includes('rogmovies')) ? 'block' : 'none';
                 } else if (cat === 'OTT') {
-                    sec.style.display = (name.includes('netflix') || name.includes('prime') || name.includes('hotstar') || name.includes('disney')) ? 'block' : 'none';
+                    sec.style.display = (id.includes('castle') || id.includes('rogmovies') || id.includes('hdhub') || id.includes('moviebox') || id.includes('multimovies') || name.includes('castle') || name.includes('rogmovies')) ? 'block' : 'none';
                 } else if (cat === 'SERIES') {
                     sec.style.display = (name.includes('series') || name.includes('kisskh') || name.includes('multimovies')) ? 'block' : 'none';
                 } else if (cat === 'ANIME') {
@@ -2987,14 +3016,16 @@
 
                 if (cat === 'ALL') {
                     sec.style.display = 'block';
-                } else if (cat === 'NETFLIX') {
-                    sec.style.display = (name.includes('netflix') || id.includes('netflix')) ? 'block' : 'none';
-                } else if (cat === 'PRIME') {
-                    sec.style.display = (name.includes('prime') || id.includes('prime')) ? 'block' : 'none';
-                } else if (cat === 'HOTSTAR') {
-                    sec.style.display = (name.includes('hotstar') || id.includes('hotstar') || name.includes('disney')) ? 'block' : 'none';
+                } else if (cat === 'OTT' || cat === 'NETFLIX' || cat === 'PRIME' || cat === 'HOTSTAR') {
+                    sec.style.display = (id.includes('rogmovies') || id.includes('hdhub') || id.includes('castle') || id.includes('moviebox') || id.includes('multimovies')) ? 'block' : 'none';
+                } else if (cat === 'ROG') {
+                    sec.style.display = id.includes('rogmovies') ? 'block' : 'none';
+                } else if (cat === 'HDHUB') {
+                    sec.style.display = id.includes('hdhub') ? 'block' : 'none';
+                } else if (cat === 'CASTLE') {
+                    sec.style.display = id.includes('castle') ? 'block' : 'none';
                 } else if (cat === 'KDRAMA') {
-                    sec.style.display = (name.includes('kisskh') || name.includes('multimovies') || name.includes('drama') || name.includes('cinefreak')) ? 'block' : 'none';
+                    sec.style.display = (name.includes('multimovies') || name.includes('drama') || name.includes('cinefreak')) ? 'block' : 'none';
                 } else if (cat === 'ANIME') {
                     sec.style.display = (name.includes('anime') || id.includes('anime') || name.includes('reanime')) ? 'block' : 'none';
                 }

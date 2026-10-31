@@ -105,6 +105,19 @@ async function getRebrandedManifest() {
                 };
             });
 
+            // Filter out dead/abandoned NetMirror scrapers upstream (0 streams, blank titles)
+            const deadCatalogIds = new Set([
+                'cnc_Netflix_other',
+                'cnc_PrimeVideo_other',
+                'cnc_Hotstar_other',
+                'cnc_Disney_other',
+                'cnc_Marvel_other',
+                'cnc_StarWars_other',
+                'cnc_Pixar_other',
+                'cnc_Kisskh_other'
+            ]);
+            const filteredCatalogs = rebrandedCatalogs.filter(c => !deadCatalogIds.has(c.id));
+
             // Priority sorting: verified working streaming catalogs & live sports first
             const priorityIds = [
                 'cnc_CastleTVUseVLC_other',
@@ -121,11 +134,10 @@ async function getRebrandedManifest() {
                 'cnc_MovieBoxIN_other',
                 'cnc_MultiMovies_other',
                 'cnc_SportzXLiveEvents_tv',
-                'cnc_SportzXHighlights_tv',
-                'cnc_Kisskh_other'
+                'cnc_SportzXHighlights_tv'
             ];
 
-            rebrandedCatalogs.sort((a, b) => {
+            filteredCatalogs.sort((a, b) => {
                 const idxA = priorityIds.indexOf(a.id);
                 const idxB = priorityIds.indexOf(b.id);
                 if (idxA !== -1 && idxB !== -1) return idxA - idxB;
@@ -143,6 +155,7 @@ async function getRebrandedManifest() {
                 background: BRAND_LOGO,
                 types: ['movie', 'series', 'tv'],
                 idPrefixes: ['tt', 'cnc:'],
+                catalogs: filteredCatalogs,
                 resources: [
                     'stream',
                     'catalog',
@@ -157,8 +170,7 @@ async function getRebrandedManifest() {
                     configurable: false,
                     configurationRequired: false,
                     adult: false
-                },
-                catalogs: rebrandedCatalogs
+                }
             };
             lastManifestFetch = now;
             return cachedManifest;
