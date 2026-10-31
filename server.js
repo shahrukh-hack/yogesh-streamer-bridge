@@ -603,8 +603,8 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    // HLS & Mixed Content Stream Proxy: /proxy/stream?url=<target_url>
-    if (pathname === '/proxy/stream') {
+    // HLS & Mixed Content Stream Proxy: /proxy/stream, /proxy/stream/playlist.m3u8, /proxy/stream/segment.ts
+    if (pathname === '/proxy/stream' || pathname.startsWith('/proxy/stream/')) {
         const targetUrl = parsedUrl.query.url;
         if (!targetUrl) {
             res.writeHead(400, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
@@ -619,12 +619,17 @@ const server = http.createServer(async (req, res) => {
             const targetReferer = parsedUrl.query.referer || (parsedTarget.protocol + '//' + parsedTarget.host + '/');
             const targetUa = parsedUrl.query.ua || req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
+            const proxyReqHeaders = {
+                'User-Agent': targetUa,
+                'Accept': '*/*',
+                'Referer': targetReferer
+            };
+            if (req.headers.range) {
+                proxyReqHeaders['Range'] = req.headers.range;
+            }
+
             const proxyReq = client.get(targetUrl, {
-                headers: {
-                    'User-Agent': targetUa,
-                    'Accept': '*/*',
-                    'Referer': targetReferer
-                },
+                headers: proxyReqHeaders,
                 timeout: 20000
             }, (proxyRes) => {
                 if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
@@ -634,13 +639,15 @@ const server = http.createServer(async (req, res) => {
                     }
                     const refQ = parsedUrl.query.referer ? `&referer=${encodeURIComponent(parsedUrl.query.referer)}` : '';
                     const uaQ = parsedUrl.query.ua ? `&ua=${encodeURIComponent(parsedUrl.query.ua)}` : '';
-                    res.writeHead(302, { 'Location': `/proxy/stream?url=${encodeURIComponent(redir)}${refQ}${uaQ}`, 'Access-Control-Allow-Origin': '*' });
+                    const isRedirM3u8 = redir.includes('.m3u8') || pathname.endsWith('.m3u8');
+                    const redirPath = isRedirM3u8 ? '/proxy/stream/playlist.m3u8' : '/proxy/stream/segment.ts';
+                    res.writeHead(302, { 'Location': `${redirPath}?url=${encodeURIComponent(redir)}${refQ}${uaQ}`, 'Access-Control-Allow-Origin': '*' });
                     res.end();
                     return;
                 }
 
                 const contentType = proxyRes.headers['content-type'] || '';
-                const isM3u8 = contentType.includes('mpegurl') || targetUrl.includes('.m3u8');
+                const isM3u8 = contentType.includes('mpegurl') || targetUrl.includes('.m3u8') || pathname.endsWith('.m3u8');
 
                 if (isM3u8) {
                     let playlistData = '';
@@ -650,6 +657,9 @@ const server = http.createServer(async (req, res) => {
                         const lines = playlistData.split(/\r?\n/);
                         const extraParams = (parsedUrl.query.referer ? `&referer=${encodeURIComponent(parsedUrl.query.referer)}` : '') +
                                             (parsedUrl.query.ua ? `&ua=${encodeURIComponent(parsedUrl.query.ua)}` : '');
+                        const isSecure = !host.includes('localhost') && !host.includes('127.0.0.1');
+                        const proto = isSecure ? 'https' : 'http';
+
                         const rewritten = lines.map(line => {
                             let trimmed = line.trim();
                             if (!trimmed) return line;
@@ -662,7 +672,9 @@ const server = http.createServer(async (req, res) => {
                                         if (!fullUri.startsWith('http://') && !fullUri.startsWith('https://')) {
                                             fullUri = baseUrl + fullUri;
                                         }
-                                        return `URI="/proxy/stream?url=${encodeURIComponent(fullUri)}${extraParams}"`;
+                                        const isSubPlaylist = fullUri.includes('.m3u8');
+                                        const proxyPath = isSubPlaylist ? '/proxy/stream/playlist.m3u8' : '/proxy/stream/segment.ts';
+                                        return `URI="${proto}://${host}${proxyPath}?url=${encodeURIComponent(fullUri)}${extraParams}"`;
                                     });
                                 }
                                 return line;
@@ -672,28 +684,42 @@ const server = http.createServer(async (req, res) => {
                             if (!fullChunk.startsWith('http://') && !fullChunk.startsWith('https://')) {
                                 fullChunk = baseUrl + fullChunk;
                             }
-                            if (fullChunk.startsWith('http://') || parsedUrl.query.referer) {
-                                return `/proxy/stream?url=${encodeURIComponent(fullChunk)}${extraParams}`;
-                            }
-                            return fullChunk;
+                            const isSubPlaylist = fullChunk.includes('.m3u8');
+                            const proxyPath = isSubPlaylist ? '/proxy/stream/playlist.m3u8' : '/proxy/stream/segment.ts';
+                            return `${proto}://${host}${proxyPath}?url=${encodeURIComponent(fullChunk)}${extraParams}`;
                         });
 
                         const out = rewritten.join('\n');
                         res.writeHead(proxyRes.statusCode || 200, {
                             'Content-Type': 'application/vnd.apple.mpegurl; charset=utf-8',
                             'Access-Control-Allow-Origin': '*',
+                            'Access-Control-Expose-Headers': 'Content-Length, Content-Range',
                             'Cache-Control': 'no-cache'
                         });
                         res.end(out);
                     });
                 } else {
+                    let chunkContentType = contentType;
+                    const lowerTarget = targetUrl.toLowerCase();
+                    if (pathname.endsWith('.ts') || lowerTarget.includes('.ts') || lowerTarget.includes('.jpg') || lowerTarget.includes('.png') || lowerTarget.includes('.jpeg')) {
+                        chunkContentType = 'video/MP2T';
+                    } else if (pathname.endsWith('.m4s') || lowerTarget.includes('.m4s')) {
+                        chunkContentType = 'video/iso.segment';
+                    } else if (!chunkContentType || chunkContentType === 'application/octet-stream') {
+                        chunkContentType = 'video/MP2T';
+                    }
+
                     const headers = {
-                        'Content-Type': contentType || 'video/MP2T',
+                        'Content-Type': chunkContentType,
                         'Access-Control-Allow-Origin': '*',
-                        'Cache-Control': 'no-cache'
+                        'Access-Control-Expose-Headers': 'Content-Length, Content-Range',
+                        'Cache-Control': 'public, max-age=3600'
                     };
                     if (proxyRes.headers['content-length']) {
                         headers['Content-Length'] = proxyRes.headers['content-length'];
+                    }
+                    if (proxyRes.headers['content-range']) {
+                        headers['Content-Range'] = proxyRes.headers['content-range'];
                     }
                     res.writeHead(proxyRes.statusCode || 200, headers);
                     proxyRes.pipe(res);
@@ -746,10 +772,12 @@ const server = http.createServer(async (req, res) => {
             return;
         }
 
-        // ⚡ In-Memory Stream Cache Check (0ms Instant Delivery)
+        // ⚡ In-Memory Stream Cache Check (0ms Instant Delivery with smart TTL)
+        const isLive = type === 'tv' || rawId.includes('Live') || rawId.includes('tv') || rawId.includes('Sports');
+        const effectiveTtl = isLive ? 30000 : STREAM_CACHE_TTL; // 30s for live sports to ensure fresh signatures, 5m for on-demand movies
         const cacheKey = `${type}:${rawId}`;
         const cached = streamCache.get(cacheKey) || streamCache.get(rawId);
-        if (cached && (Date.now() - cached.timestamp < STREAM_CACHE_TTL)) {
+        if (cached && (Date.now() - cached.timestamp < effectiveTtl)) {
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
             res.end(JSON.stringify({ streams: cached.streams }));
             return;
@@ -842,16 +870,20 @@ const server = http.createServer(async (req, res) => {
                 const streamUa = reqHeaders['User-Agent'] || reqHeaders['user-agent'] || '';
 
                 let finalPlayUrl = streamUrl;
-                if (directMpd && directMpd.startsWith('https://')) {
-                    // Origin Amazon Prime DASH CDN is HTTPS and supports direct CORS
-                    finalPlayUrl = directMpd;
+                if (streamUrl.includes('/d/master.m3u8') || (streamUrl.includes('clearkey=') && streamUrl.includes('.m3u8'))) {
+                    // Decrypted HTTPS HLS stream for Live Sports/Cricket & Live TV (plays everywhere on VLC, iPhone, Android, and Smart TVs)
+                    finalPlayUrl = streamUrl.replace('http://140.238.244.130', 'https://cncverse.dpdns.org');
                 } else if (streamUrl.startsWith('http://cncverse.dpdns.org')) {
                     finalPlayUrl = streamUrl.replace('http://cncverse.dpdns.org', 'https://cncverse.dpdns.org');
+                } else if (streamUrl.startsWith('http://140.238.244.130')) {
+                    finalPlayUrl = streamUrl.replace('http://140.238.244.130', 'https://cncverse.dpdns.org');
+                } else if (directMpd && directMpd.startsWith('https://') && !clearkey) {
+                    finalPlayUrl = directMpd;
                 } else if (streamUrl.startsWith('http://') || streamReferer) {
                     let proxyParams = `url=${encodeURIComponent(streamUrl)}`;
                     if (streamReferer) proxyParams += `&referer=${encodeURIComponent(streamReferer)}`;
                     if (streamUa) proxyParams += `&ua=${encodeURIComponent(streamUa)}`;
-                    finalPlayUrl = `${proto}://${host}/proxy/stream?${proxyParams}`;
+                    finalPlayUrl = `${proto}://${host}/proxy/stream/playlist.m3u8?${proxyParams}`;
                 }
 
                 // Sanitize Subtitle URLs to prevent Mixed Content blocking over HTTPS
@@ -860,7 +892,7 @@ const server = http.createServer(async (req, res) => {
                     if (subUrl.startsWith('http://140.238.244.130')) {
                         subUrl = subUrl.replace('http://140.238.244.130', 'https://cncverse.dpdns.org');
                     } else if (subUrl.startsWith('http://')) {
-                        subUrl = `${proto}://${host}/proxy/stream?url=${encodeURIComponent(subUrl)}`;
+                        subUrl = `${proto}://${host}/proxy/stream/playlist.m3u8?url=${encodeURIComponent(subUrl)}`;
                     }
                     return {
                         ...sub,

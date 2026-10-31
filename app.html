@@ -1365,6 +1365,65 @@
             color: #000;
         }
 
+        /* 📱 Player Options Modal & Device Launcher */
+        .player-opt-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 12px 14px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        .player-opt-btn:hover, .player-opt-btn.focused {
+            background: rgba(255, 215, 0, 0.12);
+            border-color: var(--gold);
+            transform: translateX(3px);
+        }
+
+        .player-opt-btn.gold {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%);
+            border-color: var(--gold);
+        }
+
+        .player-opt-btn.gold:hover {
+            background: var(--gold);
+            color: #000;
+        }
+
+        .player-opt-btn.gold:hover .player-opt-text span {
+            color: rgba(0, 0, 0, 0.8);
+        }
+
+        .player-opt-btn i {
+            font-size: 22px;
+            flex-shrink: 0;
+            width: 28px;
+            text-align: center;
+        }
+
+        .player-opt-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+        }
+
+        .player-opt-text strong {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .player-opt-text span {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
         /* 🚨 In-Player Format & Error Overlay */
         .player-overlay-screen {
             position: absolute;
@@ -2070,6 +2129,19 @@
             </div>
             <div class="stream-options-list" id="stream-options-container">
                 <div class="spinner-gold"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📱 DEVICE & EXTERNAL PLAYER SELECTOR MODAL -->
+    <div id="player-options-modal" class="modal-overlay" onclick="closePlayerOptionsModal(event)">
+        <div class="stream-sheet-box" onclick="event.stopPropagation()" style="max-width: 480px;">
+            <div class="sheet-drag-handle"></div>
+            <div class="sheet-top">
+                <div class="sheet-heading"><i class="fas fa-play-circle" style="color:var(--gold);"></i> Choose Playback Option</div>
+                <button class="sheet-close-btn focusable" tabindex="0" onclick="closePlayerOptionsModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="player-options-list" style="padding: 12px 16px 24px; display:flex; flex-direction:column; gap:10px;">
             </div>
         </div>
     </div>
@@ -3031,7 +3103,7 @@
             return false;
         }
 
-        // 🚀 1-Tap External Video Player Launcher (VLC, MX Player, Outplayer)
+        // 🚀 1-Tap Device-Aware External Video Player Launcher (iPhone, Android, Smart TVs, PC)
         function openInExternalPlayer(streamUrl) {
             if (!streamUrl) return;
             if (window.AndroidBridge && typeof window.AndroidBridge.openInExternalPlayer === 'function') {
@@ -3039,26 +3111,131 @@
                 return;
             }
             const ua = navigator.userAgent || '';
-            const isAndroid = /Android/i.test(ua);
-            const isIOS = /iPhone|iPad|iPod/i.test(ua);
+            const isSmartTV = /SmartTV|Tizen|webOS|NetCast|BRAVIA|GoogleTV|HbbTV|CrKey|Roku/i.test(ua);
 
-            if (isAndroid) {
-                const vlcIntent = `intent:${streamUrl}#Intent;type=video/*;package=org.videolan.vlc;action=android.intent.action.VIEW;end`;
-                const genericIntent = `intent:${streamUrl}#Intent;type=video/*;action=android.intent.action.VIEW;end`;
-                window.location.href = vlcIntent;
-                setTimeout(() => {
-                    window.location.href = genericIntent;
-                }, 1500);
-            } else if (isIOS) {
-                window.location.href = `vlc://${streamUrl}`;
-                setTimeout(() => {
-                    window.location.href = `outplayer://${streamUrl}`;
-                }, 1200);
-            } else {
-                window.location.href = `vlc://${streamUrl}`;
+            if (isSmartTV) {
+                // Smart TV browsers do not have VLC app installed. Play directly in full-screen Cinema Player!
+                closeStreamPicker();
+                launchCinemaPlayer(streamUrl, activeStreamTitle || 'Smart TV Stream', activeStreamList, activeStreamIndex);
+                showToast('📺 Playing in Smart TV Cinema Player');
+                return;
             }
 
-            copyToClipboard(streamUrl, '🚀 Stream URL copied! Opening in VLC / MX Player...');
+            showPlayerChoiceModal(streamUrl);
+        }
+
+        // 📱 Device-Aware Player Option Modal (iPhone, Android, PC)
+        function showPlayerChoiceModal(streamUrl) {
+            const modal = document.getElementById('player-options-modal');
+            const list = document.getElementById('player-options-list');
+            if (!modal || !list) return;
+
+            const ua = navigator.userAgent || '';
+            const isIOS = /iPhone|iPad|iPod/i.test(ua);
+            const isAndroid = /Android/i.test(ua);
+            const encoded = encodeURI(streamUrl);
+            const encodedComponent = encodeURIComponent(streamUrl);
+
+            let buttonsHtml = '';
+
+            // 1. In-Browser / Built-in Cinema Player Option (always available)
+            buttonsHtml += `
+                <button class="player-opt-btn gold focusable" tabindex="0" onclick="closePlayerOptionsModal(); closeStreamPicker(); launchCinemaPlayer('${escapeHtml(streamUrl)}', activeStreamTitle || 'Direct Play', activeStreamList, activeStreamIndex);">
+                    <i class="fas fa-play"></i>
+                    <div class="player-opt-text">
+                        <strong>Play in Cinema Player</strong>
+                        <span>Instant playback directly inside web browser</span>
+                    </div>
+                </button>
+            `;
+
+            if (isIOS) {
+                // iPhone / iPad: Outplayer (top rated Stremio player), VLC for iOS, Infuse
+                buttonsHtml += `
+                    <button class="player-opt-btn focusable" tabindex="0" onclick="window.location.href='outplayer://${encodedComponent}'; copyToClipboard('${escapeHtml(streamUrl)}', 'Opening in Outplayer...'); setTimeout(closePlayerOptionsModal, 600);">
+                        <i class="fas fa-play-circle" style="color:#38bdf8;"></i>
+                        <div class="player-opt-text">
+                            <strong>Outplayer (iOS Recommended)</strong>
+                            <span>Top rated external player for iPhone &amp; iPad</span>
+                        </div>
+                    </button>
+                    <button class="player-opt-btn focusable" tabindex="0" onclick="window.location.href='vlc-x-callback://x-callback-url/stream?url=${encodedComponent}'; copyToClipboard('${escapeHtml(streamUrl)}', 'Opening in VLC iOS...'); setTimeout(closePlayerOptionsModal, 600);">
+                        <i class="fab fa-vimeo-v" style="color:#FFA500;"></i>
+                        <div class="player-opt-text">
+                            <strong>VLC for iOS</strong>
+                            <span>Direct launch in official VLC App</span>
+                        </div>
+                    </button>
+                    <button class="player-opt-btn focusable" tabindex="0" onclick="window.location.href='infuse://x-callback-url/play?url=${encodedComponent}'; copyToClipboard('${escapeHtml(streamUrl)}', 'Opening in Infuse...'); setTimeout(closePlayerOptionsModal, 600);">
+                        <i class="fas fa-film" style="color:#a78bfa;"></i>
+                        <div class="player-opt-text">
+                            <strong>Infuse Player</strong>
+                            <span>High-performance iOS &amp; Apple TV playback</span>
+                        </div>
+                    </button>
+                `;
+            } else if (isAndroid) {
+                // Android Phone / Tablet / TV
+                const vlcIntent = `intent:${encoded}#Intent;type=video/*;package=org.videolan.vlc;action=android.intent.action.VIEW;end`;
+                const mxIntent = `intent:${encoded}#Intent;type=video/*;package=com.mxtech.videoplayer.ad;action=android.intent.action.VIEW;end`;
+                const genericIntent = `intent:${encoded}#Intent;type=video/*;action=android.intent.action.VIEW;end`;
+
+                buttonsHtml += `
+                    <button class="player-opt-btn focusable" tabindex="0" onclick="window.location.href='${escapeHtml(vlcIntent)}'; copyToClipboard('${escapeHtml(streamUrl)}', 'Opening in VLC Android...'); setTimeout(closePlayerOptionsModal, 600);">
+                        <i class="fab fa-vimeo-v" style="color:#FFA500;"></i>
+                        <div class="player-opt-text">
+                            <strong>VLC for Android</strong>
+                            <span>Launch stream directly in VLC Player</span>
+                        </div>
+                    </button>
+                    <button class="player-opt-btn focusable" tabindex="0" onclick="window.location.href='${escapeHtml(mxIntent)}'; copyToClipboard('${escapeHtml(streamUrl)}', 'Opening in MX Player...'); setTimeout(closePlayerOptionsModal, 600);">
+                        <i class="fas fa-play-circle" style="color:#10b981;"></i>
+                        <div class="player-opt-text">
+                            <strong>MX Player</strong>
+                            <span>Launch stream in MX Player</span>
+                        </div>
+                    </button>
+                    <button class="player-opt-btn focusable" tabindex="0" onclick="window.location.href='${escapeHtml(genericIntent)}'; copyToClipboard('${escapeHtml(streamUrl)}', 'Opening Android Video App...'); setTimeout(closePlayerOptionsModal, 600);">
+                        <i class="fab fa-android" style="color:#34d399;"></i>
+                        <div class="player-opt-text">
+                            <strong>Android App Chooser</strong>
+                            <span>Choose any installed video player</span>
+                        </div>
+                    </button>
+                `;
+            } else {
+                // Desktop (Windows / Mac)
+                buttonsHtml += `
+                    <button class="player-opt-btn focusable" tabindex="0" onclick="window.location.href='vlc://${escapeHtml(streamUrl)}'; copyToClipboard('${escapeHtml(streamUrl)}', 'Stream link copied! Open VLC, press Ctrl+N and paste'); setTimeout(closePlayerOptionsModal, 600);">
+                        <i class="fab fa-vimeo-v" style="color:#FFA500;"></i>
+                        <div class="player-opt-text">
+                            <strong>Open in VLC (Desktop)</strong>
+                            <span>Launches VLC or copies link for Ctrl+N / Cmd+N</span>
+                        </div>
+                    </button>
+                `;
+            }
+
+            // Universal 1-Tap Copy Direct Stream Link
+            buttonsHtml += `
+                <button class="player-opt-btn focusable" tabindex="0" onclick="copyToClipboard('${escapeHtml(streamUrl)}', '📋 Direct stream link copied! Paste into any player'); closePlayerOptionsModal();">
+                    <i class="fas fa-copy" style="color:var(--gold);"></i>
+                    <div class="player-opt-text">
+                        <strong>Copy Direct Stream Link</strong>
+                        <span>Paste into VLC (Media ➔ Open Network Stream)</span>
+                    </div>
+                </button>
+            `;
+
+            list.innerHTML = buttonsHtml;
+            modal.classList.add('open');
+            const firstBtn = list.querySelector('.player-opt-btn');
+            if (firstBtn) firstBtn.focus();
+        }
+
+        function closePlayerOptionsModal(e) {
+            const modal = document.getElementById('player-options-modal');
+            if (modal) modal.classList.remove('open');
         }
 
         function copyToClipboard(text, successMsg) {
@@ -3231,10 +3408,15 @@
                         actionsGroup.appendChild(playBtn);
                     }
 
+                    const ua = navigator.userAgent || '';
+                    const isSmartTV = /SmartTV|Tizen|webOS|NetCast|BRAVIA|GoogleTV|HbbTV|CrKey|Roku/i.test(ua);
+                    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+                    const vlcLabel = isSmartTV ? 'Play Cinema' : (isIOS ? 'External' : 'VLC / Player');
+
                     const vlcBtn = document.createElement('button');
                     vlcBtn.className = 'btn-stream-action btn-vlc focusable';
                     vlcBtn.tabIndex = 0;
-                    vlcBtn.innerHTML = '<i class="fas fa-play"></i> VLC / MX';
+                    vlcBtn.innerHTML = `<i class="fas fa-play"></i> ${vlcLabel}`;
                     vlcBtn.onclick = (e) => {
                         e.stopPropagation();
                         openInExternalPlayer(s.url);
