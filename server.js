@@ -666,19 +666,30 @@ async function getNativeAniKotoStreams(rawSlug) {
         const serverHtml = serverListRes?.result || '';
 
         const servers = [];
-        for (const mode of ['sub', 'dub']) {
-            const modeRegex = new RegExp(`data-type="${mode}"[\s\S]*?<ul>([\s\S]*?)<\/ul>`, 'i');
-            const modeMatch = modeRegex.exec(serverHtml);
-            if (modeMatch) {
-                const itemRegex = /<li[^>]*data-link-id="([^"]+)"[^>]*>([^<]+)<\/li>/gi;
-                let itemMatch;
-                while ((itemMatch = itemRegex.exec(modeMatch[1])) !== null) {
-                    servers.push({
-                        mode: mode.toUpperCase(),
-                        server: itemMatch[2].trim(),
-                        linkId: itemMatch[1]
-                    });
-                }
+        const typeSections = serverHtml.split(/data-type=["']/i);
+        for (const sec of typeSections) {
+            const mode = sec.toLowerCase().startsWith('sub') ? 'SUB' : (sec.toLowerCase().startsWith('dub') ? 'DUB' : null);
+            if (!mode) continue;
+            const itemRegex = /data-link-id=["']([^"']+)["'][^>]*>([^<]+)<\/li>/gi;
+            let itemMatch;
+            while ((itemMatch = itemRegex.exec(sec)) !== null) {
+                servers.push({
+                    mode,
+                    server: itemMatch[2].trim(),
+                    linkId: itemMatch[1]
+                });
+            }
+        }
+
+        if (servers.length === 0) {
+            const anyRegex = /data-link-id=["']([^"']+)["'][^>]*>([^<]+)<\/li>/gi;
+            let m;
+            while ((m = anyRegex.exec(serverHtml)) !== null) {
+                servers.push({
+                    mode: 'SUB',
+                    server: m[2].trim(),
+                    linkId: m[1]
+                });
             }
         }
 
