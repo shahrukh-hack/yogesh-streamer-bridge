@@ -11,6 +11,7 @@ const UPSTREAM_RESOLVERS = (process.env.UPSTREAM_RESOLVERS || process.env.UPSTRE
     .filter(Boolean);
 const UPSTREAM_RESOLVER = UPSTREAM_RESOLVERS[0];
 const PLUGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer-plugins/builds/plugins.json';
+const SCRAPERS_MANIFEST_URL = 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer-plugins/builds/scrapers.json';
 const BRAND_LOGO = 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg';
 const APP_PIN = process.env.APP_PIN || '778899';
 const ANDROID_APK_URL = 'https://github.com/shahrukh-hack/yogesh-streamer-multiplatform/releases/download/v2.0.0/YogeshStreamer-v2.0.0.apk';
@@ -726,6 +727,23 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'ok', service: 'yogesh-streamer-bridge', resolvers: UPSTREAM_RESOLVERS.length }));
+        return;
+    }
+
+    // Universal Decompiled Scrapers API (Reverse Engineered from CS3)
+    if (pathname === '/api/scrapers' || pathname === '/api/providers') {
+        try {
+            const data = await fetchJson(SCRAPERS_MANIFEST_URL);
+            res.writeHead(200, {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Access-Control-Allow-Origin': '*',
+                'Cache-Control': 'public, max-age=1800'
+            });
+            res.end(JSON.stringify(data || { scrapers: [] }));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to fetch scrapers: ' + e.message }));
+        }
         return;
     }
 
