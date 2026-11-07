@@ -79,6 +79,101 @@ async function fetchJsonWithFailover(apiPath) {
     throw lastError || new Error(`All upstream resolvers failed for ${cleanPath}`);
 }
 
+
+// ========================================================
+// ⚡ NATIVE IN-PROCESS SCRAPERS (REVERSE ENGINEERED FROM CS3)
+// ========================================================
+const FANCODE_API_URL = 'https://raw.githubusercontent.com/Jitendra-unatti/fancode/refs/heads/main/data/fancode.json';
+const DOMAINS_API_URL = 'https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/domains.json';
+
+let cachedDomains = null;
+let lastDomainsFetch = 0;
+
+async function getLiveDomains() {
+    const now = Date.now();
+    if (cachedDomains && (now - lastDomainsFetch < 3600000)) {
+        return cachedDomains;
+    }
+    try {
+        const d = await fetchJson(DOMAINS_API_URL);
+        if (d && typeof d === 'object') {
+            cachedDomains = d;
+            lastDomainsFetch = now;
+            return cachedDomains;
+        }
+    } catch(e) {}
+    return { HDHUB4u: 'https://new11.hdhub4u.cl', vegamovies: 'https://vegamovies.lease' };
+}
+
+async function getNativeSportsCatalog() {
+    try {
+        const raw = await fetchJson(FANCODE_API_URL);
+        const matches = raw.matches || raw.liveMatches || [];
+        return matches.filter(m => m && m.match_id).map(m => {
+            const title = m.title || 'Live Match';
+            const category = m.category || 'Sports';
+            const poster = m.image || BRAND_LOGO;
+            const tournament = m.tournament || 'Live Tournament';
+            const teams = Array.isArray(m.team) ? m.team.map(t => t.name).join(' vs ') : title;
+            return {
+                id: `native:fc:${m.match_id}`,
+                name: `⚡ ${title} (${category})`,
+                type: 'tv',
+                poster: poster,
+                background: poster,
+                description: `🏆 ${tournament} | ${teams} | Direct 0ms HLS Stream`
+            };
+        });
+    } catch(err) {
+        console.error('Error fetching native sports catalog:', err.message);
+        return [];
+    }
+}
+
+async function getNativeSportsStream(matchId) {
+    try {
+        const raw = await fetchJson(FANCODE_API_URL);
+        const matches = raw.matches || raw.liveMatches || [];
+        const match = matches.find(m => String(m.match_id) === String(matchId));
+        if (!match) return { streams: [] };
+
+        const streams = [];
+        const primaryUrl = match.STREAMING_CDN?.Primary_Playback_URL || match.STREAMING_CDN?.fancode_cdn;
+        if (primaryUrl && primaryUrl.startsWith('http')) {
+            streams.push({
+                name: `⚡ [Web Play] Live Stream (Adaptive 1080p)`,
+                title: `${match.title} - Official Master Stream`,
+                url: primaryUrl,
+                isWebPlayable: true
+            });
+        }
+
+        if (Array.isArray(match.auto_streams)) {
+            match.auto_streams.forEach(as => {
+                const lines = (as.auto || '').split('\n');
+                let curRes = 'HD';
+                lines.forEach(l => {
+                    if (l.includes('RESOLUTION=')) {
+                        const m = l.match(/RESOLUTION=\d+x(\d+)/);
+                        if (m && m[1]) curRes = `${m[1]}p`;
+                    } else if (l.startsWith('http')) {
+                        streams.push({
+                            name: `⚡ [Web Play] ${curRes} Stream`,
+                            title: `${match.title} (${curRes})`,
+                            url: l.trim(),
+                            isWebPlayable: true
+                        });
+                    }
+                });
+            });
+        }
+        return { streams };
+    } catch(err) {
+        console.error('Error resolving native sports stream:', err.message);
+        return { streams: [] };
+    }
+}
+
 async function getRebrandedManifest() {
     const now = Date.now();
     if (cachedManifest && (now - lastManifestFetch) < MANIFEST_CACHE_TTL) {
@@ -167,6 +262,17 @@ async function getRebrandedManifest() {
                 return 0;
             });
 
+                        // Prepend Native In-House Scraper Catalog (Reverse-Engineered from CS3)
+            const nativeSportsCatalog = {
+                type: 'tv',
+                id: 'native_live_sports_tv',
+                name: '⚡ Live Cricket & Sports (Direct 0ms HD)',
+                extra: [
+                    { name: 'search', isRequired: false },
+                    { name: 'skip', isRequired: false }
+                ]
+            };
+            const finalCatalogs = [nativeSportsCatalog, ...filteredCatalogs];
             cachedManifest = {
                 id: 'org.yogeshstreamer.addon',
                 version: '1.2.1',
@@ -176,7 +282,7 @@ async function getRebrandedManifest() {
                 background: BRAND_LOGO,
                 types: ['movie', 'series', 'tv'],
                 idPrefixes: ['tt', 'cnc:'],
-                catalogs: filteredCatalogs,
+                catalogs: finalCatalogs,
                 resources: [
                     'stream',
                     'catalog',
@@ -822,6 +928,15 @@ const server = http.createServer(async (req, res) => {
             return;
         }
 
+        // ⚡ Native Reverse-Engineered Stream Resolver Check
+        if (rawId.startsWith('native:fc:')) {
+            const matchId = rawId.replace('native:fc:', '');
+            const result = await getNativeSportsStream(matchId);
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify(result));
+            return;
+        }
+
         // ⚡ In-Memory Stream Cache Check (0ms Instant Delivery with smart TTL)
         const isLive = type === 'tv' || rawId.includes('Live') || rawId.includes('tv') || rawId.includes('Sports');
         const effectiveTtl = isLive ? 30000 : STREAM_CACHE_TTL; // 30s for live sports to ensure fresh signatures, 5m for on-demand movies
@@ -988,6 +1103,12 @@ const server = http.createServer(async (req, res) => {
 
     // Catalog route: /catalog/:type/:id.json or with extra args
     if (pathname.startsWith('/catalog/')) {
+        if (pathname.includes('native_live_sports_tv')) {
+            const metas = await getNativeSportsCatalog();
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ metas }));
+            return;
+        }
         try {
             // If Stremio is requesting /catalog/movie/cnc_..._other.json, map to /catalog/other/cnc_..._other.json upstream
             let mappedPath = pathname;
@@ -1019,6 +1140,14 @@ const server = http.createServer(async (req, res) => {
 
     // Meta route: /meta/:type/:id.json
     if (pathname.startsWith('/meta/')) {
+        if (pathname.includes('native:fc:')) {
+            const matchId = pathname.split('native:fc:')[1].replace('.json', '');
+            const catalog = await getNativeSportsCatalog();
+            const item = catalog.find(m => m.id === `native:fc:${matchId}`);
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ meta: item || null }));
+            return;
+        }
         const afterPrefix = pathname.slice('/meta/'.length);
         const firstSlash = afterPrefix.indexOf('/');
         if (firstSlash === -1) {
