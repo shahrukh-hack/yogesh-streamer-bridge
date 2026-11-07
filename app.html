@@ -3548,8 +3548,7 @@
                     const isWeb = isWebPlayable(s.url, s.name);
                     const langBadge = detectAudioLanguageBadge(s.title || s.name || '');
                     const cleanServerTitle = escapeHtml(s.name || ('Server ' + (idx + 1)));
-                    const cleanServerSub = escapeHtml(s.title ? s.title.split('
-')[0] : '1080p Ultra HD Direct Stream');
+                    const cleanServerSub = escapeHtml(s.title ? s.title.replace(/[\r\n].*/, '') : '1080p Ultra HD Direct Stream');
 
                     card.innerHTML = `
                         <div class="stream-info-col">
