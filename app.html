@@ -3152,9 +3152,9 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const tabParam = urlParams.get('tab');
                 if (tabParam === 'sports') {
-                    switchNavTab('tab-sports', 4);
+                    switchNavTab('tab-sports', 3);
                 } else if (tabParam === 'livetv') {
-                    switchNavTab('tab-livetv', 3);
+                    switchNavTab('tab-livetv', 4);
                 } else if (tabParam === 'movies') {
                     switchNavTab('tab-movies', 1);
                 } else if (tabParam === 'series') {
@@ -3435,12 +3435,12 @@
                             <div style="font-size: 15px; font-weight: 800; color: #FFF;">Web Series Hub</div>
                             <div style="font-size: 11px; color: var(--text-sub); margin-top: 4px;">Complete Seasons • Anime • Hindi &amp; English</div>
                         </div>
-                        <div class="hub-jump-card focusable" tabindex="0" onclick="switchNavTab('tab-sports', 4)" style="background: linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(15,23,42,0.8) 100%); border: 1px solid rgba(239,68,68,0.3);">
+                        <div class="hub-jump-card focusable" tabindex="0" onclick="switchNavTab('tab-sports', 3)" style="background: linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(15,23,42,0.8) 100%); border: 1px solid rgba(239,68,68,0.3);">
                             <div style="font-size: 24px; color: #f87171; margin-bottom: 8px;"><i class="fas fa-baseball-bat-ball"></i></div>
                             <div style="font-size: 15px; font-weight: 800; color: #FFF;">Live Sports Arena</div>
                             <div style="font-size: 11px; color: var(--text-sub); margin-top: 4px;">0ms Cricket • Football • Highlights &amp; Events</div>
                         </div>
-                        <div class="hub-jump-card focusable" tabindex="0" onclick="switchNavTab('tab-livetv', 3)" style="background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(15,23,42,0.8) 100%); border: 1px solid rgba(16,185,129,0.3);">
+                        <div class="hub-jump-card focusable" tabindex="0" onclick="switchNavTab('tab-livetv', 4)" style="background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(15,23,42,0.8) 100%); border: 1px solid rgba(16,185,129,0.3);">
                             <div style="font-size: 24px; color: #34d399; margin-bottom: 8px;"><i class="fas fa-satellite-dish"></i></div>
                             <div style="font-size: 15px; font-weight: 800; color: #FFF;">24/7 Live TV Channels</div>
                             <div style="font-size: 11px; color: var(--text-sub); margin-top: 4px;">Indian Channels • Regional • News &amp; Music</div>
@@ -3494,7 +3494,7 @@
             sec.innerHTML = `
                 <div class="section-headline">
                     <div class="section-title-text"><i class="fas fa-baseball-bat-ball" style="color: var(--gold);"></i> ⚡ Live Cricket & Sports Arena <span class="badge-stream-format" style="background:rgba(255,51,75,0.2); color:#FF334B; border:1px solid rgba(255,51,75,0.4);">🔴 LIVE • 60FPS</span></div>
-                    <span class="see-all-btn focusable" tabindex="0" onclick="switchNavTab('tab-sports', 4)">
+                    <span class="see-all-btn focusable" tabindex="0" onclick="switchNavTab('tab-sports', 3)">
                         Sports Arena <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
                     </span>
                 </div>
@@ -3558,7 +3558,7 @@
             sec.innerHTML = `
                 <div class="section-headline">
                     <div class="section-title-text"><i class="fas fa-satellite-dish" style="color: var(--cyan);"></i> 📺 24/7 Live Indian TV Channels <span class="badge-stream-format badge-stream-web">⚡ Instant Web Play</span></div>
-                    <span class="see-all-btn focusable" tabindex="0" onclick="switchNavTab('tab-livetv', 3)">
+                    <span class="see-all-btn focusable" tabindex="0" onclick="switchNavTab('tab-livetv', 4)">
                         All Channels <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
                     </span>
                 </div>
