@@ -2459,24 +2459,24 @@
             <a href="#home" class="nav-pill active focusable" tabindex="0" role="button" onclick="event.preventDefault(); switchNavTab('tab-home', 0)"><i class="fas fa-home"></i> Home</a>
             <a href="#movies" class="nav-pill focusable" tabindex="0" role="button" onclick="event.preventDefault(); switchNavTab('tab-movies', 1)"><i class="fas fa-film"></i> Movies</a>
             <a href="#series" class="nav-pill focusable" tabindex="0" role="button" onclick="event.preventDefault(); switchNavTab('tab-series', 2)"><i class="fas fa-tv"></i> Series</a>
-            <a href="#livetv" class="nav-pill focusable" tabindex="0" role="button" onclick="event.preventDefault(); switchNavTab('tab-livetv', 3)"><i class="fas fa-satellite-dish"></i> Live TV</a>
-            <a href="#sports" class="nav-pill focusable" tabindex="0" role="button" onclick="event.preventDefault(); switchNavTab('tab-sports', 4)"><i class="fas fa-baseball-bat-ball"></i> Sports</a>
-            <a href="#extensions" class="nav-pill focusable" tabindex="0" role="button" onclick="event.preventDefault(); openExtensionsModal()"><i class="fas fa-puzzle-piece" style="color: var(--gold);"></i> 43+ Scrapers</a>
+            <a href="#sports" class="nav-pill focusable" tabindex="0" role="button" onclick="event.preventDefault(); switchNavTab('tab-sports', 3)"><i class="fas fa-baseball-bat-ball"></i> Sports</a>
+            <a href="#livetv" class="nav-pill focusable" tabindex="0" role="button" onclick="event.preventDefault(); switchNavTab('tab-livetv', 4)"><i class="fas fa-satellite-dish"></i> Live TV</a>
             <a href="#search" class="nav-pill focusable" tabindex="0" role="button" onclick="event.preventDefault(); switchNavTab('tab-search', 5)"><i class="fas fa-search"></i> Search</a>
+            <a href="#settings" class="nav-pill focusable" tabindex="0" role="button" onclick="event.preventDefault(); openSettingsModal()"><i class="fas fa-gear" style="color: var(--gold);"></i> Settings</a>
         </div>
 
         <div class="header-right-actions">
             <button class="btn-sync-header focusable" tabindex="0" onclick="openSyncModal()" title="Cross-Device Cloud Sync">
                 <i class="fas fa-cloud"></i> <span>Sync</span>
             </button>
-            <button class="btn-extensions-header focusable" tabindex="0" onclick="openExtensionsModal()" title="View Verified Cloud Extensions">
-                <i class="fas fa-puzzle-piece"></i> <span>Extensions</span>
+            <button class="btn-extensions-header focusable" tabindex="0" onclick="openSettingsModal()" title="Settings & Cloud Engine">
+                <i class="fas fa-gear"></i> <span>Settings</span>
             </button>
-            <a href="/apk" target="_blank" class="btn-apk-header focusable" tabindex="0" title="Download Native Android App APK (v5.4.4)">
-                <i class="fab fa-android"></i> <span>Get App (v5.4)</span>
+            <a href="/apk" target="_blank" class="btn-apk-header focusable" tabindex="0" title="Download Official Android App (v5.4.4)">
+                <i class="fab fa-android"></i> <span>Android App</span>
             </a>
             <div class="header-status">
-                <span class="status-dot"></span> 42 SOURCES ONLINE
+                <span class="status-dot"></span> 43 SERVERS ONLINE
             </div>
             <button class="btn-lock-session focusable" tabindex="0" onclick="lockApp()" title="Lock Session">
                 <i class="fas fa-lock"></i> <span>Lock</span>
@@ -2835,6 +2835,12 @@
             <div id="player-pip-btn" class="focusable" tabindex="0" style="cursor:pointer; font-size:11px; color:#a78bfa; font-weight:800; border:1px solid rgba(167,139,250,0.4); padding:4px 12px; border-radius:20px; background:rgba(0,0,0,0.6); display:flex; align-items:center; gap:6px;" onclick="togglePictureInPicture()" title="Picture-in-Picture">
                 <i class="fas fa-clone"></i> <span>PiP</span>
             </div>
+            <div id="player-quality-btn" class="focusable" tabindex="0" style="display:none; cursor:pointer; font-size:11px; color:#ec4899; font-weight:800; border:1px solid rgba(236,72,153,0.4); padding:4px 12px; border-radius:20px; background:rgba(0,0,0,0.6); align-items:center; gap:6px;" onclick="toggleQualityLevel()" title="Stream Resolution">
+                <i class="fas fa-sliders-h"></i> <span id="player-quality-label">Auto</span>
+            </div>
+            <div id="player-skip-btn" class="focusable" tabindex="0" style="cursor:pointer; font-size:11px; color:#60a5fa; font-weight:800; border:1px solid rgba(96,165,250,0.4); padding:4px 12px; border-radius:20px; background:rgba(0,0,0,0.6); display:flex; align-items:center; gap:6px;" onclick="skipIntroTime()" title="Skip 85s Intro">
+                <i class="fas fa-forward"></i> <span>+85s Intro</span>
+            </div>
             <div style="font-size: 11px; color: var(--cyan); font-weight: 800;">1080p Ultra HD • HLS Direct</div>
         </div>
         <div class="player-viewport" id="player-screen-wrap"></div>
@@ -2943,17 +2949,21 @@
             <i class="fas fa-tv"></i>
             <span>Series</span>
         </div>
-        <div class="bottom-nav-item focusable" tabindex="0" role="button" onclick="switchNavTab('tab-livetv', 3)">
-            <i class="fas fa-satellite-dish"></i>
-            <span>Live TV</span>
-        </div>
-        <div class="bottom-nav-item focusable" tabindex="0" role="button" onclick="switchNavTab('tab-sports', 4)">
+        <div class="bottom-nav-item focusable" tabindex="0" role="button" onclick="switchNavTab('tab-sports', 3)">
             <i class="fas fa-baseball-bat-ball"></i>
             <span>Sports</span>
+        </div>
+        <div class="bottom-nav-item focusable" tabindex="0" role="button" onclick="switchNavTab('tab-livetv', 4)">
+            <i class="fas fa-satellite-dish"></i>
+            <span>Live TV</span>
         </div>
         <div class="bottom-nav-item focusable" tabindex="0" role="button" onclick="switchNavTab('tab-search', 5)">
             <i class="fas fa-search"></i>
             <span>Search</span>
+        </div>
+        <div class="bottom-nav-item focusable" tabindex="0" role="button" onclick="openSettingsModal()">
+            <i class="fas fa-gear"></i>
+            <span>Settings</span>
         </div>
     </nav>
 
@@ -4945,6 +4955,30 @@
                 }
             });
 
+            // 🎬 Playback Completed End Screen
+            video.addEventListener('ended', () => {
+                showToast('🎉 Playback Finished');
+                const overlay = document.getElementById('player-overlay-screen');
+                if (overlay) {
+                    overlay.innerHTML = `
+                        <div class="player-overlay-card">
+                            <div class="player-overlay-icon" style="color:var(--gold);"><i class="fas fa-check-circle"></i></div>
+                            <h2>Finished Watching</h2>
+                            <p><b>${cleanTitle(title)}</b></p>
+                            <div class="player-overlay-btns">
+                                <button class="btn-overlay-act gold focusable" tabindex="0" onclick="const v = document.querySelector('#player-screen-wrap video'); if (v) { v.currentTime = 0; v.play(); dismissPlayerOverlay(); }">
+                                    <i class="fas fa-redo"></i> Replay
+                                </button>
+                                <button class="btn-overlay-act outline focusable" tabindex="0" onclick="closeCinemaPlayer()">
+                                    <i class="fas fa-home"></i> Back to Catalog
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    overlay.style.display = 'flex';
+                }
+            });
+
             // Seek to saved position if resuming
             if (resumeTime && resumeTime > 0) {
                 video.addEventListener('loadedmetadata', () => {
@@ -5159,6 +5193,7 @@
                     await currentShakaPlayer.load(directMpd);
                     dismissPlayerOverlay();
                     updateAudioTrackUI();
+                    updateQualityUI();
                     video.play().catch(e => console.log('Autoplay:', e));
                     return;
                 } catch (shakaErr) {
@@ -5200,7 +5235,11 @@
                 currentHlsEngine.on(Hls.Events.MANIFEST_PARSED, function () {
                     dismissPlayerOverlay();
                     updateAudioTrackUI();
+                    updateQualityUI();
                     video.play().catch(e => console.log('Autoplay blocked:', e));
+                });
+                currentHlsEngine.on(Hls.Events.LEVEL_SWITCHED, function () {
+                    updateQualityUI();
                 });
                 currentHlsEngine.on(Hls.Events.AUDIO_TRACKS_UPDATED, function () {
                     updateAudioTrackUI();
@@ -5273,6 +5312,80 @@
             } else {
                 btn.style.display = 'none';
             }
+        }
+
+        // 🎚️ Adaptive Stream Quality Selector Engine
+        function updateQualityUI() {
+            const btn = document.getElementById('player-quality-btn');
+            const label = document.getElementById('player-quality-label');
+            if (!btn || !label) return;
+
+            if (currentHlsEngine && currentHlsEngine.levels && currentHlsEngine.levels.length > 1) {
+                btn.style.display = 'inline-flex';
+                const cur = currentHlsEngine.currentLevel;
+                if (cur === -1) {
+                    label.innerText = '⚙️ Auto';
+                } else {
+                    const h = currentHlsEngine.levels[cur] ? currentHlsEngine.levels[cur].height : '?';
+                    label.innerText = `⚙️ ${h}p`;
+                }
+                return;
+            }
+
+            if (currentShakaPlayer) {
+                const tracks = currentShakaPlayer.getVariantTracks().filter(t => t.height && t.height > 0);
+                const heights = [...new Set(tracks.map(t => t.height))];
+                if (heights.length > 1) {
+                    btn.style.display = 'inline-flex';
+                    const activeTrack = tracks.find(t => t.active);
+                    label.innerText = activeTrack ? `⚙️ ${activeTrack.height}p` : '⚙️ Auto';
+                    return;
+                }
+            }
+
+            btn.style.display = 'none';
+        }
+
+        function toggleQualityLevel() {
+            if (currentHlsEngine && currentHlsEngine.levels && currentHlsEngine.levels.length > 1) {
+                const levels = currentHlsEngine.levels;
+                let cur = currentHlsEngine.currentLevel;
+                let next;
+                if (cur === -1) {
+                    next = levels.length - 1;
+                } else if (cur === 0) {
+                    next = -1;
+                } else {
+                    next = cur - 1;
+                }
+                currentHlsEngine.currentLevel = next;
+                updateQualityUI();
+                const desc = next === -1 ? 'Auto (Adaptive)' : `${levels[next].height || levels[next].name || 'HD'}p`;
+                showToast(`🎚️ Video Resolution: ${desc}`);
+                return;
+            }
+
+            if (currentShakaPlayer) {
+                const tracks = currentShakaPlayer.getVariantTracks().filter(t => t.height && t.height > 0);
+                if (tracks.length > 1) {
+                    const activeTrack = tracks.find(t => t.active);
+                    const curIdx = tracks.indexOf(activeTrack);
+                    const nextTrack = tracks[(curIdx + 1) % tracks.length];
+                    currentShakaPlayer.selectVariantTrack(nextTrack, false);
+                    updateQualityUI();
+                    showToast(`🎚️ Video Resolution: ${nextTrack.height}p`);
+                    return;
+                }
+            }
+
+            showToast('ℹ️ Single adaptive stream quality');
+        }
+
+        function skipIntroTime() {
+            const video = document.querySelector('#player-screen-wrap video');
+            if (!video) return;
+            video.currentTime = Math.min((video.duration || Infinity) - 2, video.currentTime + 85);
+            showToast('⏩ Skipped +85s Intro');
         }
 
         // 🎧 Multi-Audio Track Selector Engine
@@ -5401,6 +5514,8 @@
             }
             const audioBtn = document.getElementById('player-audio-switch-btn');
             if (audioBtn) audioBtn.style.display = 'none';
+            const qBtn = document.getElementById('player-quality-btn');
+            if (qBtn) qBtn.style.display = 'none';
             activeStreamList = [];
             const container = document.getElementById('player-screen-wrap');
             const video = container.querySelector('video');
