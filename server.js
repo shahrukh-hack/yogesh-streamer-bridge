@@ -821,7 +821,12 @@ const server = http.createServer(async (req, res) => {
                 ? path.join(__dirname, 'app.html') 
                 : path.join(__dirname, 'index.html');
             const appHtml = fs.readFileSync(htmlPath, 'utf8');
-            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.writeHead(200, { 
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            });
             res.end(appHtml);
         } catch (e) {
             res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -844,7 +849,8 @@ const server = http.createServer(async (req, res) => {
             };
             res.writeHead(200, {
                 'Content-Type': mimeTypes[ext] || 'application/octet-stream',
-                'Access-Control-Allow-Origin': '*'
+                'Access-Control-Allow-Origin': '*',
+                'Cache-Control': pathname === '/sw.js' ? 'no-cache, no-store, must-revalidate, max-age=0' : 'public, max-age=86400'
             });
             fs.createReadStream(assetPath).pipe(res);
             return;
