@@ -5,7 +5,12 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 7000;
-const UPSTREAM_RESOLVER = process.env.UPSTREAM_RESOLVER || 'https://cncverse.dpdns.org';
+const UPSTREAM_RESOLVERS = (process.env.UPSTREAM_RESOLVERS || process.env.UPSTREAM_RESOLVER || 'https://cncverse.dpdns.org')
+    .split(',')
+    .map(s => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+const UPSTREAM_RESOLVER = UPSTREAM_RESOLVERS[0];
+const PLUGINS_MANIFEST_URL = 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer-plugins/builds/plugins.json';
 const BRAND_LOGO = 'https://raw.githubusercontent.com/shahrukh-hack/yogesh-streamer/master/assets/logos/cinematic_gold_logo_1787579512053.jpg';
 const APP_PIN = process.env.APP_PIN || '778899';
 const ANDROID_APK_URL = 'https://github.com/shahrukh-hack/yogesh-streamer-multiplatform/releases/download/v2.0.0/YogeshStreamer-v2.0.0.apk';
@@ -58,6 +63,22 @@ function fetchJson(targetUrl) {
     });
 }
 
+async function fetchJsonWithFailover(apiPath) {
+    let lastError = null;
+    const cleanPath = apiPath.startsWith('/') ? apiPath : `/${apiPath}`;
+    for (const base of UPSTREAM_RESOLVERS) {
+        try {
+            const targetUrl = `${base}${cleanPath}`;
+            const res = await fetchJson(targetUrl);
+            if (res) return res;
+        } catch (err) {
+            lastError = err;
+            console.warn(`Upstream resolver ${base} failed for ${cleanPath}: ${err.message}`);
+        }
+    }
+    throw lastError || new Error(`All upstream resolvers failed for ${cleanPath}`);
+}
+
 async function getRebrandedManifest() {
     const now = Date.now();
     if (cachedManifest && (now - lastManifestFetch) < MANIFEST_CACHE_TTL) {
@@ -65,7 +86,7 @@ async function getRebrandedManifest() {
     }
 
     try {
-        const upstream = await fetchJson(`${UPSTREAM_RESOLVER}/manifest.json`);
+        const upstream = await fetchJsonWithFailover('/manifest.json');
         if (upstream && Array.isArray(upstream.catalogs)) {
             // Rebrand catalogs: convert "other" into "movie" so Stremio can display them in Discover
             const rebrandedCatalogs = upstream.catalogs.map(c => {
@@ -598,7 +619,24 @@ const server = http.createServer(async (req, res) => {
     // Health check
     if (pathname === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok', service: 'yogesh-streamer-bridge' }));
+        res.end(JSON.stringify({ status: 'ok', service: 'yogesh-streamer-bridge', resolvers: UPSTREAM_RESOLVERS.length }));
+        return;
+    }
+
+    // Official Yogesh Streamer Plugins Catalog API (from yogesh-streamer-plugins)
+    if (pathname === '/api/plugins' || pathname === '/api/extensions') {
+        try {
+            const plugins = await fetchJson(PLUGINS_MANIFEST_URL);
+            res.writeHead(200, {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Access-Control-Allow-Origin': '*',
+                'Cache-Control': 'public, max-age=1800'
+            });
+            res.end(JSON.stringify(plugins || []));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to fetch plugins manifest: ' + e.message }));
+        }
         return;
     }
 
@@ -814,8 +852,8 @@ const server = http.createServer(async (req, res) => {
 
             for (const cand of candidateTypes) {
                 try {
-                    const upstreamUrl = `${UPSTREAM_RESOLVER}/stream/${encodeURIComponent(cand)}/${encodeURIComponent(rawId)}.json`;
-                    const result = await fetchJson(upstreamUrl);
+                    const streamPath = `/stream/${encodeURIComponent(cand)}/${encodeURIComponent(rawId)}.json`;
+                    const result = await fetchJsonWithFailover(streamPath);
                     if (result && Array.isArray(result.streams) && result.streams.length > 0) {
                         data = result;
                         break;
@@ -959,8 +997,7 @@ const server = http.createServer(async (req, res) => {
                 isMovieMappedFromOther = true;
             }
 
-            const upstreamUrl = `${UPSTREAM_RESOLVER}${mappedPath}`;
-            const data = await fetchJson(upstreamUrl);
+            const data = await fetchJsonWithFailover(mappedPath);
 
             let metas = Array.isArray(data?.metas) ? data.metas : [];
             if (isMovieMappedFromOther) {
@@ -1012,8 +1049,7 @@ const server = http.createServer(async (req, res) => {
                 isMovieMappedFromOther = true;
             }
 
-            const upstreamUrl = `${UPSTREAM_RESOLVER}/meta/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`;
-            const data = await fetchJson(upstreamUrl);
+            const data = await fetchJsonWithFailover(`/meta/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`);
 
             if (data?.meta && (isMovieMappedFromOther || data.meta.type === 'other')) {
                 data.meta.type = type;
@@ -1052,8 +1088,7 @@ const server = http.createServer(async (req, res) => {
                 targetType = 'other';
             }
 
-            const upstreamUrl = `${UPSTREAM_RESOLVER}/subtitles/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`;
-            const data = await fetchJson(upstreamUrl);
+            const data = await fetchJsonWithFailover(`/subtitles/${encodeURIComponent(targetType)}/${encodeURIComponent(rawId)}.json`);
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
             res.end(JSON.stringify(data || { subtitles: [] }));
         } catch (err) {
@@ -1073,5 +1108,21 @@ server.listen(PORT, () => {
     console.log(`🌟 Yogesh Streamer Multi-Device Bridge Online!`);
     console.log(`📡 Listening on http://localhost:${PORT}`);
     console.log(`📋 Manifest URL: http://localhost:${PORT}/manifest.json`);
+    console.log(`🔌 Active Resolvers: ${UPSTREAM_RESOLVERS.join(', ')}`);
     console.log(`====================================================`);
+
+    // 💓 Auto Keep-Alive Heartbeat (prevents Render / cloud platform cold starts)
+    if (process.env.KEEP_ALIVE !== 'false') {
+        const HEARTBEAT_INTERVAL = 14 * 60 * 1000; // 14 minutes
+        setInterval(() => {
+            const pingTarget = process.env.PUBLIC_URL || `http://localhost:${PORT}/health`;
+            try {
+                const parsed = url.parse(pingTarget);
+                const client = parsed.protocol === 'https:' ? https : http;
+                client.get(pingTarget, (pingRes) => {
+                    pingRes.resume();
+                }).on('error', () => {});
+            } catch (e) {}
+        }, HEARTBEAT_INTERVAL);
+    }
 });

@@ -8,5 +8,7 @@ services:
     envVars:
       - key: PORT
         value: 10000
+      - key: KEEP_ALIVE
+        value: "true"
       - key: APP_PIN
         sync: false
