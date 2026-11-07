@@ -737,10 +737,21 @@ async function getNativeAniKotoStreams(rawSlug) {
             }
         }
 
-        return { streams };
+        return { 
+            streams,
+            _diag: {
+                watchUrl,
+                animeId,
+                epListLen: epHtml.length,
+                foundEpNum,
+                targetIds: targetIds ? targetIds.slice(0, 20) : null,
+                serverListLen: serverHtml.length,
+                serversCount: servers.length
+            }
+        };
     } catch(err) {
         console.error(`Error resolving AniKoto stream for ${rawSlug}:`, err.message);
-        return { streams: [] };
+        return { streams: [], _error: err.message, _stack: err.stack };
     }
 }
 
