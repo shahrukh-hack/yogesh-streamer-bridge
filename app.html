@@ -4835,6 +4835,22 @@
             }
         }
 
+        function togglePictureInPicture() {
+            const video = document.querySelector('#player-screen-wrap video');
+            if (!video) return;
+            if (document.pictureInPictureElement) {
+                document.exitPictureInPicture().catch(() => {});
+            } else if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
+                video.requestPictureInPicture().then(() => {
+                    showToast('Picture-in-Picture Activated', 'fa-clone');
+                }).catch(() => {
+                    showToast('PiP not available for this stream', 'fa-circle-exclamation');
+                });
+            } else {
+                showToast('PiP not supported on this device', 'fa-circle-exclamation');
+            }
+        }
+
         // ==========================================
         // 🕒 CONTINUE WATCHING PROGRESS
         // ==========================================
